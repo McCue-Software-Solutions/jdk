@@ -234,10 +234,8 @@ class Example implements Comparable<Example> {
                 //automatic modules:
                 Map<String, List<Path>> module2Files =
                         modulePathFiles.stream()
-                                       .map(f -> f.toPath())
-                                       .collect(Collectors.groupingBy(p -> modulePath.relativize(p)
-                                                                            .getName(0)
-                                                                            .toString()));
+                                       .map(f -> Path.of(f.getAbsolutePath()))
+                                       .collect(Collectors.groupingBy(p -> modulePath.relativize(p).getName(0).toString()));
                 for (Entry<String, List<Path>> e : module2Files.entrySet()) {
                     File scratchDir = new File(tempDir, "scratch");
                     scratchDir.mkdirs();
