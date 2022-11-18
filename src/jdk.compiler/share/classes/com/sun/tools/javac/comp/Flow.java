@@ -1157,7 +1157,7 @@ public class Flow {
                             log.error(
                                     exit.tree.pos(),
                                     Errors.UnreportedExceptionNeedToCatchOrThrow(thrownExit.thrown),
-                                    new Info(Fragments.InfoFunctionDeclaredHere, log.currentSource(), List.of(thrownExit.declMethod.pos()))
+                                    new Info(Fragments.InfoFunctionDeclaredHere, List.of(new InfoPosition( log.currentSource(), thrownExit.declMethod.pos())))
                             );
                         }
                         log.error(exit.tree.pos(), Errors.UnreportedExceptionNeedToCatchOrThrow(thrownExit.thrown));
