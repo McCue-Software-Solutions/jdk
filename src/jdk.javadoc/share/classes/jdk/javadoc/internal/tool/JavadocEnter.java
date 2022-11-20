@@ -100,6 +100,6 @@ public class JavadocEnter extends Enter {
 
     /** Don't complain about a duplicate class. */
     @Override
-    protected void duplicateClass(DiagnosticPosition pos, ClassSymbol c) {}
+    protected void duplicateClass(DiagnosticPosition pos, ClassSymbol c, ClassSymbol existingClass) {}
 
 }

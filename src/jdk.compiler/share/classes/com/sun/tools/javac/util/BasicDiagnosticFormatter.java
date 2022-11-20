@@ -156,12 +156,12 @@ public class BasicDiagnosticFormatter extends AbstractDiagnosticFormatter {
         final var message = info.message();
         buf.append(localize(l, message.key(), message.getArgs()));
 
-        final var source = info.sourceFile();
-        for (final DiagnosticPosition displayPos : info.positions()) {
+        for (final InfoPosition displayPos : info.positions()) {
             buf.append("\n");
 
-            final var startPos = displayPos.getStartPosition();
-            final var endPos = endPosition(displayPos, source.getEndPosTable());
+            final var source = displayPos.source();
+            final var startPos = displayPos.position().getStartPosition();
+            final var endPos = endPosition(displayPos.position(), source.getEndPosTable());
 
             buf.append(formatSource(diag, true, l));
             buf.append(":");

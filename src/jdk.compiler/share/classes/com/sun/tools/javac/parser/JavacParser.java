@@ -686,11 +686,7 @@ public class JavacParser implements Parser {
                     log.error(DiagnosticFlag.SYNTAX,
                               token.pos,
                               Errors.IntNumberTooLarge(strval(prefix)),
-                              new Info(
-                                      Fragments.InfoIntNumberRange,
-                                      log.currentSource(),
-                                      List.nil()
-                              ), new Help(
+                              new Info(Fragments.InfoIntNumberRange), new Help(
                                     Fragments.HelpUseLongIntegerLiteral,
                                     List.of(new SuggestedChange(
                                             log.currentSource(),
@@ -703,11 +699,7 @@ public class JavacParser implements Parser {
                     log.error(DiagnosticFlag.SYNTAX,
                               token.pos,
                               Errors.IntNumberTooLarge(strval(prefix)),
-                              new Info(
-                                      Fragments.InfoLongNumberRange,
-                                      log.currentSource(),
-                                      List.nil()
-                              ));
+                              new Info(Fragments.InfoLongNumberRange));
                 }
             }
             break;
@@ -717,11 +709,7 @@ public class JavacParser implements Parser {
                     TypeTag.LONG,
                     Long.valueOf(Convert.string2long(strval(prefix), token.radix())));
             } catch (NumberFormatException ex) {
-                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.IntNumberTooLarge(strval(prefix)), new Info(
-                        Fragments.InfoLongNumberRange,
-                        log.currentSource(),
-                        List.nil()
-                ));
+                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.IntNumberTooLarge(strval(prefix)), new Info(Fragments.InfoLongNumberRange));
             }
             break;
         case FLOATLITERAL: {

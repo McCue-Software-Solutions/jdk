@@ -38,7 +38,9 @@ import com.sun.tools.javac.code.Scope.*;
 import com.sun.tools.javac.code.Symbol.*;
 import com.sun.tools.javac.code.Type.*;
 import com.sun.tools.javac.main.Option.PkgInfo;
+import com.sun.tools.javac.resources.CompilerProperties;
 import com.sun.tools.javac.resources.CompilerProperties.Errors;
+import com.sun.tools.javac.resources.CompilerProperties.Fragments;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -478,8 +480,9 @@ public class Enter extends JCTree.Visitor {
         tree.sym = c;
 
         // Enter class into `compiled' table and enclosing scope.
-        if (chk.getCompiled(c) != null) {
-            duplicateClass(tree.pos(), c);
+        final var existingClass = chk.getCompiled(c);
+        if (existingClass != null) {
+            duplicateClass(tree.pos(), c, existingClass);
             result = types.createErrorType(tree.name, (TypeSymbol)owner, Type.noType);
             tree.sym = (ClassSymbol)result.tsym;
             return;
@@ -545,8 +548,8 @@ public class Enter extends JCTree.Visitor {
         }
 
     /** Complain about a duplicate class. */
-    protected void duplicateClass(DiagnosticPosition pos, ClassSymbol c) {
-        log.error(pos, Errors.DuplicateClass(c.fullname));
+    protected void duplicateClass(DiagnosticPosition pos, ClassSymbol c, ClassSymbol existingClass) {
+        log.error(pos, Errors.DuplicateClass(c.fullname), new Info(Fragments.InfoClassAlreadyDefined(existingClass.sourcefile.getName())));
     }
 
     /** Class enter visitor method for type parameters.
