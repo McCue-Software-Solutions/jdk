@@ -154,7 +154,10 @@ public class BasicDiagnosticFormatter extends AbstractDiagnosticFormatter {
         buf.append("\n");
         buf.append("info: ");
         final var message = info.message();
-        buf.append(localize(l, message.key(), message.getArgs()));
+        final var messageKey = message.key();
+        final var messageArgs = message.getArgs();
+        final var formattedArgs = formatArguments(messageKey, messageArgs, l);
+        buf.append(localize(l, messageKey, formattedArgs.toArray()));
 
         for (final InfoPosition displayPos : info.positions()) {
             buf.append("\n");
@@ -192,7 +195,10 @@ public class BasicDiagnosticFormatter extends AbstractDiagnosticFormatter {
         buf.append("\n");
         buf.append("help: ");
         final var message = help.message();
-        buf.append(localize(l, message.key(), message.getArgs()));
+        final var messageKey = message.key();
+        final var messageArgs = message.getArgs();
+        final var formattedArgs = formatArguments(messageKey, messageArgs, l);
+        buf.append(localize(l, messageKey, formattedArgs.toArray()));
         buf.append("\n");
 
         for (final SuggestedChange change : help.suggestedChanges()) {

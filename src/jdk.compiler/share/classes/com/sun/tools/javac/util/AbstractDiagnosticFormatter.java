@@ -164,20 +164,36 @@ public abstract class AbstractDiagnosticFormatter implements DiagnosticFormatter
     protected Collection<String> formatArguments(JCDiagnostic d, Locale l) {
         ListBuffer<String> buf = new ListBuffer<>();
         for (Object o : d.getArgs()) {
-           buf.append(formatArgument(d, o, l));
+           buf.append(formatArgument(d.getCode(), o, l));
         }
         return buf.toList();
     }
 
     /**
-     * Format a single argument of a given diagnostic.
+     * Format the arguments of a given diagnostic.
      *
-     * @param d diagnostic whose argument is to be formatted
+     * @param diagKey the key for the diagnostic being formatted
+     * @param args the arguments to be formatted
+     * @param l locale object to be used for i18n
+     * @return a Collection whose elements are the formatted arguments of the diagnostic
+     */
+    protected Collection<String> formatArguments(String diagKey, Object[] args, Locale l) {
+        ListBuffer<String> buf = new ListBuffer<>();
+        for (final var o : args) {
+            buf.append(formatArgument(diagKey, o, l));
+        }
+        return buf.toList();
+    }
+
+    /**
+     * Format a single argument of a diagnostic.
+     *
+     * @param diagCode the key for the diagnostic being formatted
      * @param arg argument to be formatted
      * @param l locale object to be used for i18n
      * @return string representation of the diagnostic argument
      */
-    protected String formatArgument(JCDiagnostic d, Object arg, Locale l) {
+    protected String formatArgument(String diagCode, Object arg, Locale l) {
         if (arg instanceof JCDiagnostic diagnostic) {
             String s = null;
             depth++;
@@ -197,7 +213,7 @@ public abstract class AbstractDiagnosticFormatter implements DiagnosticFormatter
             return expr2String(expression);
         }
         else if (arg instanceof Iterable<?> iterable && !(arg instanceof Path)) {
-            return formatIterable(d, iterable, l);
+            return formatIterable(diagCode, iterable, l);
         }
         else if (arg instanceof Type type) {
             return printer.visit(type, l);
@@ -247,19 +263,19 @@ public abstract class AbstractDiagnosticFormatter implements DiagnosticFormatter
             }
 
     /**
-     * Format an iterable argument of a given diagnostic.
+     * Format an iterable argument of a diagnostic.
      *
-     * @param d diagnostic whose argument is to be formatted
+     * @param diagCode the key for the diagnostic being formatted
      * @param it iterable argument to be formatted
      * @param l locale object to be used for i18n
      * @return string representation of the diagnostic iterable argument
      */
-    protected String formatIterable(JCDiagnostic d, Iterable<?> it, Locale l) {
+    protected String formatIterable(String diagCode, Iterable<?> it, Locale l) {
         StringBuilder sbuf = new StringBuilder();
         String sep = "";
         for (Object o : it) {
             sbuf.append(sep);
-            sbuf.append(formatArgument(d, o, l));
+            sbuf.append(formatArgument(diagCode, o, l));
             sep = ",";
         }
         return sbuf.toString();
