@@ -151,7 +151,7 @@ public final class RawDiagnosticFormatter extends AbstractDiagnosticFormatter {
     }
 
     @Override
-    protected String formatArgument(JCDiagnostic diag, Object arg, Locale l) {
+    protected String formatArgument(String diagCode, Object arg, Locale l) {
         String s;
         if (arg instanceof Formattable) {
             s = arg.toString();
@@ -163,10 +163,10 @@ public final class RawDiagnosticFormatter extends AbstractDiagnosticFormatter {
         } else if (arg instanceof Tag tag) {
             s = "compiler.misc.tree.tag." + StringUtils.toLowerCase(tag.name());
         } else if (arg instanceof Source && arg == Source.DEFAULT &&
-                CODES_NEEDING_SOURCE_NORMALIZATION.contains(diag.getCode())) {
+                CODES_NEEDING_SOURCE_NORMALIZATION.contains(diagCode)) {
             s = "DEFAULT";
         } else {
-            s = super.formatArgument(diag, arg, null);
+            s = super.formatArgument(diagCode, arg, null);
         }
         return (arg instanceof JCDiagnostic) ? "(" + s + ")" : s;
     }

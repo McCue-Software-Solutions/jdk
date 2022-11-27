@@ -1894,7 +1894,7 @@ public class Lower extends TreeTranslator {
             Symbol typeSym =
                 rs.accessBase(
                     rs.findIdentInType(pos, attrEnv, c.type, names.TYPE, KindSelector.VAR),
-                    pos, c.type, names.TYPE, true);
+                    pos, attrEnv, c.type, names.TYPE, true);
             if (typeSym.kind == VAR)
                 ((VarSymbol)typeSym).getConstValue(); // ensure initializer is evaluated
             return make.QualIdent(typeSym);
