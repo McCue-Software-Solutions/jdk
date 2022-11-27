@@ -3635,7 +3635,7 @@ public class Attr extends JCTree.Visitor {
 
                 JCDiagnostic detailsDiag = ((Resolve.ResolveError)refSym.baseSymbol())
                         .getDiagnostic(JCDiagnostic.DiagnosticType.FRAGMENT,
-                                that, exprType.tsym, exprType, that.name, argtypes, typeargtypes);
+                                that, localEnv, exprType, that.name, argtypes, typeargtypes);
 
                 JCDiagnostic diag = diags.create(log.currentSource(), that,
                         targetError ?
@@ -4435,7 +4435,7 @@ public class Attr extends JCTree.Visitor {
                     sym.name != names._super &&
                     (sym.kind == VAR || sym.kind == MTH)) {
                     rs.accessBase(rs.new StaticError(sym),
-                              tree.pos(), site, sym.name, true);
+                              tree.pos(), env, site, sym.name, true);
                 }
             }
         } else if (sym.kind != ERR &&
@@ -4489,7 +4489,7 @@ public class Attr extends JCTree.Visitor {
             case PACKAGE:
                 return rs.accessBase(
                     rs.findIdentInPackage(pos, env, site.tsym, name, resultInfo.pkind),
-                    pos, location, site, name, true);
+                    pos, env, site, name, true);
             case ARRAY:
             case CLASS:
                 if (resultInfo.pt.hasTag(METHOD) || resultInfo.pt.hasTag(FORALL)) {
@@ -4504,7 +4504,7 @@ public class Attr extends JCTree.Visitor {
                 } else {
                     // We are seeing a plain identifier as selector.
                     Symbol sym = rs.findIdentInType(pos, env, site, name, resultInfo.pkind);
-                        sym = rs.accessBase(sym, pos, location, site, name, true);
+                        sym = rs.accessBase(sym, pos, env, site, name, true);
                     return sym;
                 }
             case WILDCARD:
@@ -4526,7 +4526,7 @@ public class Attr extends JCTree.Visitor {
                     Symbol sym2 = (sym.flags() & Flags.PRIVATE) != 0 ?
                         rs.new AccessError(env, site, sym) :
                                 sym;
-                    rs.accessBase(sym2, pos, location, site, name, true);
+                    rs.accessBase(sym2, pos, env, site, name, true);
                     return sym;
                 }
             case ERROR:
@@ -4948,7 +4948,7 @@ public class Attr extends JCTree.Visitor {
             List<Type> argtypes2 = argtypes.map(
                     rs.new ResolveDeferredRecoveryMap(AttrMode.CHECK, sym, env.info.pendingResolutionPhase));
             JCDiagnostic errDiag = errSym.getDiagnostic(JCDiagnostic.DiagnosticType.ERROR,
-                    env.tree, sym, site, sym.name, argtypes2, typeargtypes);
+                    env.tree, env, site, sym.name, argtypes2, typeargtypes);
             log.report(errDiag);
             return types.createErrorType(site);
         }

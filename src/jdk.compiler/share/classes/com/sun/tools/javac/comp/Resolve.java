@@ -53,22 +53,13 @@ import com.sun.tools.javac.util.DefinedBy.Api;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticFlag;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticType;
-import com.sun.tools.javac.util.JCDiagnostic.Warning;
+import com.sun.tools.javac.util.List;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -526,7 +517,7 @@ public class Resolve {
         public Void visitClassType(ClassType t, Env<AttrContext> env) {
             visit(t.getTypeArguments(), env);
             if (!isAccessible(env, t, true)) {
-                accessBase(new AccessError(env, null, t.tsym), env.tree.pos(), env.enclClass.sym, t, t.tsym.name, true);
+                accessBase(new AccessError(env, null, t.tsym), env.tree.pos(), env, t, t.tsym.name, true);
             }
             return null;
         }
@@ -1600,7 +1591,7 @@ public class Resolve {
                         // and construct InapplicableSymbolsError.
                         // Intentionally fallthrough.
                         currentResolutionContext.addInapplicableCandidate(accessError.sym,
-                                accessError.getDiagnostic(JCDiagnostic.DiagnosticType.FRAGMENT, null, null, site, null, argtypes, typeargtypes));
+                                accessError.getDiagnostic(JCDiagnostic.DiagnosticType.FRAGMENT, null, env, site, null, argtypes, typeargtypes));
                     } else {
                         return bestSoFar;
                     }
@@ -1612,7 +1603,7 @@ public class Resolve {
         }
         if (!isAccessible(env, site, sym)) {
             AccessError curAccessError = new AccessError(env, site, sym);
-            JCDiagnostic curDiagnostic = curAccessError.getDiagnostic(JCDiagnostic.DiagnosticType.FRAGMENT, null, null, site, null, argtypes, typeargtypes);
+            JCDiagnostic curDiagnostic = curAccessError.getDiagnostic(JCDiagnostic.DiagnosticType.FRAGMENT, null, env, site, null, argtypes, typeargtypes);
             // Currently, an AccessError occurs.
             // If bestSoFar.kind was ABSENT_MTH, return an AccessError(kind is HIDDEN).
             // If bestSoFar.kind was HIDDEN(AccessError), WRONG_MTH, WRONG_MTHS, return an InapplicableSymbolsError(kind is WRONG_MTHS).
@@ -1631,7 +1622,7 @@ public class Resolve {
                 // Add the JCDiagnostics of previous and current AccessError to the currentResolutionContext
                 // and construct InapplicableSymbolsError.
                 currentResolutionContext.addInapplicableCandidate(accessError.sym,
-                        accessError.getDiagnostic(JCDiagnostic.DiagnosticType.FRAGMENT, null, null, site, null, argtypes, typeargtypes));
+                        accessError.getDiagnostic(JCDiagnostic.DiagnosticType.FRAGMENT, null, env, site, null, argtypes, typeargtypes));
                 currentResolutionContext.addInapplicableCandidate(sym, curDiagnostic);
                 bestSoFar = new InapplicableSymbolsError(currentResolutionContext);
             }
@@ -2561,7 +2552,7 @@ public class Resolve {
      */
     Symbol accessInternal(Symbol sym,
                   DiagnosticPosition pos,
-                  Symbol location,
+                  Env<AttrContext> env,
                   Type site,
                   Name name,
                   boolean qualified,
@@ -2573,7 +2564,7 @@ public class Resolve {
             sym = errSym.access(name, qualified ? site.tsym : syms.noSymbol);
             argtypes = logResolveHelper.getArgumentTypes(errSym, sym, name, argtypes);
             if (logResolveHelper.resolveDiagnosticNeeded(site, argtypes, typeargtypes)) {
-                logResolveError(errSym, pos, location, site, name, argtypes, typeargtypes);
+                logResolveError(errSym, pos, env, site, name, argtypes, typeargtypes);
             }
         }
         return sym;
@@ -2585,25 +2576,13 @@ public class Resolve {
      */
     Symbol accessMethod(Symbol sym,
                   DiagnosticPosition pos,
-                  Symbol location,
+                  Env<AttrContext> env,
                   Type site,
                   Name name,
                   boolean qualified,
                   List<Type> argtypes,
                   List<Type> typeargtypes) {
-        return accessInternal(sym, pos, location, site, name, qualified, argtypes, typeargtypes, methodLogResolveHelper);
-    }
-
-    /** Same as original accessMethod(), but without location.
-     */
-    Symbol accessMethod(Symbol sym,
-                  DiagnosticPosition pos,
-                  Type site,
-                  Name name,
-                  boolean qualified,
-                  List<Type> argtypes,
-                  List<Type> typeargtypes) {
-        return accessMethod(sym, pos, site.tsym, site, name, qualified, argtypes, typeargtypes);
+        return accessInternal(sym, pos, env, site, name, qualified, argtypes, typeargtypes, methodLogResolveHelper);
     }
 
     /**
@@ -2612,21 +2591,11 @@ public class Resolve {
      */
     Symbol accessBase(Symbol sym,
                   DiagnosticPosition pos,
-                  Symbol location,
+                  Env<AttrContext> env,
                   Type site,
                   Name name,
                   boolean qualified) {
-        return accessInternal(sym, pos, location, site, name, qualified, List.nil(), null, basicLogResolveHelper);
-    }
-
-    /** Same as original accessBase(), but without location.
-     */
-    Symbol accessBase(Symbol sym,
-                  DiagnosticPosition pos,
-                  Type site,
-                  Name name,
-                  boolean qualified) {
-        return accessBase(sym, pos, site.tsym, site, name, qualified);
+        return accessInternal(sym, pos, env, site, name, qualified, List.nil(), null, basicLogResolveHelper);
     }
 
     interface LogResolveHelper {
@@ -2710,7 +2679,7 @@ public class Resolve {
                         Name name, KindSelector kind) {
         return accessBase(
             findIdent(pos, env, name, kind),
-            pos, env.enclClass.sym.type, name, false);
+            pos, env, env.enclClass.sym.type, name, false);
     }
 
     /** Resolve an unqualified method identifier.
@@ -2956,7 +2925,7 @@ public class Resolve {
                                 sym = super.access(env, pos, location, sym);
                             } else {
                                 sym = new DiamondError(sym, currentResolutionContext);
-                                sym = accessMethod(sym, pos, site, names.init, true, argtypes, typeargtypes);
+                                sym = accessMethod(sym, pos, env, site, names.init, true, argtypes, typeargtypes);
                                 env.info.pendingResolutionPhase = currentResolutionContext.step;
                             }
                         }
@@ -3489,7 +3458,7 @@ public class Resolve {
         Symbol access(Env<AttrContext> env, DiagnosticPosition pos, Symbol location, Symbol sym) {
             if (sym.kind.isResolutionError()) {
                 //if nothing is found return the 'first' error
-                sym = accessMethod(sym, pos, location, site, name, true, argtypes, typeargtypes);
+                sym = accessMethod(sym, pos, env, site, name, true, argtypes, typeargtypes);
             }
             return sym;
         }
@@ -3757,7 +3726,7 @@ public class Resolve {
                 Symbol sym = env1.info.scope.findFirst(name);
                 if (sym != null) {
                     if (staticOnly) sym = new StaticError(sym);
-                    return accessBase(sym, pos, env.enclClass.sym.type,
+                    return accessBase(sym, pos, env, env.enclClass.sym.type,
                                   name, true);
                 }
             }
@@ -3823,7 +3792,7 @@ public class Resolve {
             log.error(pos, Errors.EnclClassRequired(member));
             return syms.errSymbol;
         } else {
-            return accessBase(sym, pos, env.enclClass.sym.type, sym.name, true);
+            return accessBase(sym, pos, env, env.enclClass.sym.type, sym.name, true);
         }
     }
 
@@ -3884,18 +3853,18 @@ public class Resolve {
     //used by TransTypes when checking target type of synthetic cast
     public void logAccessErrorInternal(Env<AttrContext> env, JCTree tree, Type type) {
         AccessError error = new AccessError(env, env.enclClass.type, type.tsym);
-        logResolveError(error, tree.pos(), env.enclClass.sym, env.enclClass.type, null, null, null);
+        logResolveError(error, tree.pos(), env, env.enclClass.type, null, null, null);
     }
     //where
     private void logResolveError(ResolveError error,
             DiagnosticPosition pos,
-            Symbol location,
+            Env<AttrContext> env,
             Type site,
             Name name,
             List<Type> argtypes,
             List<Type> typeargtypes) {
         JCDiagnostic d = error.getDiagnostic(JCDiagnostic.DiagnosticType.ERROR,
-                pos, location, site, name, argtypes, typeargtypes);
+                pos, env, site, name, argtypes, typeargtypes);
         if (d != null) {
             d.setFlag(DiagnosticFlag.RESOLVE_ERROR);
             log.report(d);
@@ -3993,7 +3962,7 @@ public class Resolve {
          */
         abstract JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
                 DiagnosticPosition pos,
-                Symbol location,
+                Env<AttrContext> env,
                 Type site,
                 Name name,
                 List<Type> argtypes,
@@ -4041,14 +4010,14 @@ public class Resolve {
         }
 
         @Override
-        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Symbol location, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
+        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Env<AttrContext> env, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
             return diags.create(dkind, log.currentSource(), pos, "illegal.ref.to.restricted.type", typeName);
         }
     }
 
     /**
      * InvalidSymbolError error class indicating that a symbol matching a
-     * given name does not exists in a given site.
+     * given name does not exist in a given site.
      */
     class SymbolNotFoundError extends ResolveError {
 
@@ -4060,10 +4029,13 @@ public class Resolve {
             super(kind, debugName);
         }
 
+        // TODO (pretty-diags): tune this and the arguments for the Levenshtein distance better
+        private final static int SUGGESTION_DISTANCE_THRESHOLD = 5;
+
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
                 DiagnosticPosition pos,
-                Symbol location,
+                Env<AttrContext> env,
                 Type site,
                 Name name,
                 List<Type> argtypes,
@@ -4074,9 +4046,7 @@ public class Resolve {
                 return null;
 
             boolean hasLocation = false;
-            if (location == null) {
-                location = site.tsym;
-            }
+            final var location = env.info.scope.owner;
             if (!location.name.isEmpty()) {
                 if (location.kind == PCK && !site.tsym.exists() && location.name != names.java) {
                     return diags.create(dkind, log.currentSource(), pos,
@@ -4089,11 +4059,22 @@ public class Resolve {
             KindName kindname = isConstructor ? KindName.CONSTRUCTOR : kind.absentKind();
             Name idname = isConstructor ? site.tsym.name : name;
             String errKey = getErrorKey(kindname, typeargtypes.nonEmpty(), hasLocation);
+
+            final var closestMember = getClosestMember(env, name, typeargtypes, argtypes);
+            final var closestDistance = closestMember.distance();
+
+            var suggestMember = (closestDistance <= SUGGESTION_DISTANCE_THRESHOLD) ? closestMember.symbol() : null;
+
             if (hasLocation) {
-                return diags.create(dkind, log.currentSource(), pos,
-                        errKey, kindname, idname, //symbol kindname, name
-                        typeargtypes, args(argtypes), //type parameters and arguments (if any)
-                        getLocationDiag(location, site)); //location kindname, type
+                var diag = diags.create(dkind, log.currentSource(), pos,
+                                    errKey, kindname, idname, //symbol kindname, name
+                                    typeargtypes, args(argtypes), //type parameters and arguments (if any)
+                                    getLocationDiag(location, site)); //location kindname, type
+                if (suggestMember != null) {
+                    diag = diag.withHelp(new Help(Fragments.HelpSimilarSymbol(Kinds.kindName(suggestMember), suggestMember)));
+                }
+
+                return diag;
             }
             else {
                 return diags.create(dkind, log.currentSource(), pos,
@@ -4118,6 +4099,7 @@ public class Resolve {
             }
             return key + suffix;
         }
+
         private JCDiagnostic getLocationDiag(Symbol location, Type site) {
             if (location.kind == VAR) {
                 return diags.fragment(Fragments.Location1(kindName(location),
@@ -4129,6 +4111,50 @@ public class Resolve {
                                       null));
             }
         }
+
+        private SymbolDistance getClosestMember(final Env<AttrContext> env,
+                                                final Name name,
+                                                final List<Type> typeParameterTypes,
+                                                final List<Type> argTypes
+        ) {
+            Symbol bestSymbol = null;
+            var bestDistance = Integer.MAX_VALUE;
+            
+            final var targetName = name.toString();
+
+            // get symbols from the current scope or from the enclosing class
+            final var checkSymbols = new ArrayList<Symbol>();
+            env.info.scope.getSymbols().forEach(checkSymbols::add);
+
+            final var enclClass = env.enclClass;
+            if (enclClass != null) {
+                enclClass.sym.members().getSymbols().forEach(checkSymbols::add);
+            }
+
+            for (final var symbol : checkSymbols) {
+                final var tryName = symbol.isConstructor() ? symbol.owner.name.toString() : symbol.name.toString();
+                final var dist = Levenshtein.distance(targetName.toLowerCase(), tryName.toLowerCase());
+                if (dist < bestDistance) {
+                    bestDistance = dist;
+                    bestSymbol = symbol;
+                } else if (dist == bestDistance) {
+                    // if the distance is as good as the best so far, prefer a symbol that matches type parameters
+                    // and arguments if they exist
+                    final var symType = symbol.asType();
+                    final var symTypeParameters = symType.getTypeArguments();
+                    final var symArgTypes = symType.getParameterTypes();
+
+                    // TODO (pretty-diags) use a distance function for comparison here too
+                    if (types.isSameTypes(symTypeParameters, typeParameterTypes) && types.isSameTypes(symArgTypes, argTypes)) {
+                        bestSymbol = symbol;
+                    }
+                }
+            }
+
+            return new SymbolDistance(bestSymbol, bestDistance);
+        }
+
+        private record SymbolDistance(Symbol symbol, int distance) {}
     }
 
     /**
@@ -4162,7 +4188,7 @@ public class Resolve {
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
                 DiagnosticPosition pos,
-                Symbol location,
+                Env<AttrContext> env,
                 Type site,
                 Name name,
                 List<Type> argtypes,
@@ -4219,7 +4245,7 @@ public class Resolve {
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
                 DiagnosticPosition pos,
-                Symbol location,
+                Env<AttrContext> env,
                 Type site,
                 Name name,
                 List<Type> argtypes,
@@ -4254,15 +4280,15 @@ public class Resolve {
                     protected Pair<Symbol, JCDiagnostic> errCandidate() {
                         return p;
                     }
-                }.getDiagnostic(dkind, pos,
-                    location, site, name, argtypes, typeargtypes);
+                }.getDiagnostic(dkind, pos, env,
+                    site, name, argtypes, typeargtypes);
                 if (truncatedDiag) {
                     d.setFlag(DiagnosticFlag.COMPRESSED);
                 }
                 return d;
             } else {
-                return new SymbolNotFoundError(ABSENT_MTH).getDiagnostic(dkind, pos,
-                    location, site, name, argtypes, typeargtypes);
+                return new SymbolNotFoundError(ABSENT_MTH).getDiagnostic(dkind, pos, env,
+                    site, name, argtypes, typeargtypes);
             }
         }
         //where
@@ -4356,8 +4382,8 @@ public class Resolve {
         }
 
         @Override
-        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos,
-                Symbol location, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
+        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Env<AttrContext> env,
+                Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
             JCDiagnostic details = getDetails();
             if (details != null && compactMethodDiags) {
                 JCDiagnostic simpleDiag =
@@ -4397,14 +4423,14 @@ public class Resolve {
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
                 DiagnosticPosition pos,
-                Symbol location,
+                Env<AttrContext> env,
                 Type site,
                 Name name,
                 List<Type> argtypes,
                 List<Type> typeargtypes) {
             if (sym.name == names.init && sym.owner != site.tsym) {
                 return new SymbolNotFoundError(ABSENT_MTH).getDiagnostic(dkind,
-                        pos, location, site, name, argtypes, typeargtypes);
+                        pos, env, site, name, argtypes, typeargtypes);
             }
             else if ((sym.flags() & PUBLIC) != 0
                 || (env != null && this.site != null
@@ -4465,7 +4491,7 @@ public class Resolve {
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
                 DiagnosticPosition pos,
-                Symbol location,
+                Env<AttrContext> env,
                 Type site,
                 Name name,
                 List<Type> argtypes,
@@ -4557,7 +4583,7 @@ public class Resolve {
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
                 DiagnosticPosition pos,
-                Symbol location,
+                Env<AttrContext> env,
                 Type site,
                 Name name,
                 List<Type> argtypes,
@@ -4606,7 +4632,7 @@ public class Resolve {
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
                 DiagnosticPosition pos,
-                Symbol location,
+                Env<AttrContext> env,
                 Type site,
                 Name name,
                 List<Type> argtypes,
@@ -4669,8 +4695,8 @@ public class Resolve {
         }
 
         @Override
-        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Symbol location, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
-            return delegatedError.getDiagnostic(dkind, pos, location, site, name, argtypes, typeargtypes);
+        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Env<AttrContext> env, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
+            return delegatedError.getDiagnostic(dkind, pos, env, site, name, argtypes, typeargtypes);
         }
     }
 
@@ -4688,7 +4714,7 @@ public class Resolve {
         }
 
         @Override
-        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Symbol location, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
+        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Env<AttrContext> env, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
             final String key;
             if (!unboundLookup) {
                 key = "bad.static.method.in.bound.lookup";
@@ -4698,7 +4724,7 @@ public class Resolve {
                 key = "bad.instance.method.in.unbound.lookup";
             }
             return sym.kind.isResolutionError() ?
-                    ((ResolveError)sym).getDiagnostic(dkind, pos, location, site, name, argtypes, typeargtypes) :
+                    ((ResolveError)sym).getDiagnostic(dkind, pos, env, site, name, argtypes, typeargtypes) :
                     diags.create(dkind, log.currentSource(), pos, key, Kinds.kindName(sym), sym);
         }
     }
@@ -4714,7 +4740,7 @@ public class Resolve {
         }
 
         @Override
-        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Symbol location, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
+        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Env<AttrContext> env, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
            return diags.create(dkind, log.currentSource(), pos,
                 "cant.access.inner.cls.constr", site.tsym.name, argtypes, site.getEnclosingType());
         }
@@ -4731,7 +4757,7 @@ public class Resolve {
         }
 
         @Override
-        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Symbol location, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
+        JCDiagnostic getDiagnostic(DiagnosticType dkind, DiagnosticPosition pos, Env<AttrContext> env, Type site, Name name, List<Type> argtypes, List<Type> typeargtypes) {
             JCDiagnostic d = diags.create(dkind, log.currentSource(), pos,
                 "cant.access", ex.sym, ex.getDetailValue());
 
