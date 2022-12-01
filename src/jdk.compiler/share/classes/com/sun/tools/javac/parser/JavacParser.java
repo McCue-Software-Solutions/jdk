@@ -596,7 +596,20 @@ public class JavacParser implements Parser {
             nextToken();
             return names.error;
         } else if (token.kind == ENUM) {
-            log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.EnumAsIdentifier);
+            log.error(
+                    DiagnosticFlag.SYNTAX,
+                    token.pos,
+                    Errors.EnumAsIdentifier,
+                    new Help(
+                            Fragments.HelpRenameTheIdentifier,
+                            List.of(new SuggestedChange(
+                                    log.currentSource(),
+                                    new RangeDiagnosticPosition(token.pos, token.endPos),
+                                    "_enum",
+                                    Applicability.UNKNOWN
+                            ))
+                    )
+            );
             nextToken();
             return names.error;
         } else if (token.kind == THIS) {
