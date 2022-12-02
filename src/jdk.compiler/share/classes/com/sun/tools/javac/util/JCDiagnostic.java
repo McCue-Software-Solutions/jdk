@@ -425,7 +425,11 @@ public class JCDiagnostic implements Diagnostic<JavaFileObject> {
         /** A warning. */
         WARNING("warn"),
         /** An error. */
-        ERROR("err");
+        ERROR("err"),
+        /** An info, used to provide context to errors */
+        INFO("info"),
+        /** A help, used to suggest changes */
+        HELP("help");
 
         final String key;
 
@@ -728,6 +732,18 @@ public class JCDiagnostic implements Diagnostic<JavaFileObject> {
     public static final class Fragment extends DiagnosticInfo {
         public Fragment(String prefix, String key, Object... args) {
             super(DiagnosticType.FRAGMENT, prefix, key, args);
+        }
+    }
+
+    public static final class InfoFragment extends DiagnosticInfo {
+        public InfoFragment(String prefix, String code, Object... args) {
+            super(INFO, prefix, code, args);
+        }
+    }
+
+    public static final class HelpFragment extends DiagnosticInfo {
+        public HelpFragment(String prefix, String code, Object... args) {
+            super(HELP, prefix, code, args);
         }
     }
 

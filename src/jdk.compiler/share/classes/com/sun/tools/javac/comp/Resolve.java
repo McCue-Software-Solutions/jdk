@@ -43,6 +43,7 @@ import com.sun.tools.javac.jvm.*;
 import com.sun.tools.javac.main.Option;
 import com.sun.tools.javac.resources.CompilerProperties.Errors;
 import com.sun.tools.javac.resources.CompilerProperties.Fragments;
+import com.sun.tools.javac.resources.CompilerProperties.Helps;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -4071,7 +4072,7 @@ public class Resolve {
                                     typeargtypes, args(argtypes), //type parameters and arguments (if any)
                                     getLocationDiag(location, site)); //location kindname, type
                 if (suggestMember != null) {
-                    diag = diag.withHelp(new Help(Fragments.HelpSimilarSymbol(Kinds.kindName(suggestMember), suggestMember)));
+                    diag = diag.withHelp(new Help(Helps.SimilarSymbol(Kinds.kindName(suggestMember), suggestMember)));
                 }
 
                 return diag;
