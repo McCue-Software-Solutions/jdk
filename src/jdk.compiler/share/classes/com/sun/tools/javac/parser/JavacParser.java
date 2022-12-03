@@ -40,6 +40,8 @@ import com.sun.tools.javac.parser.Tokens.*;
 import com.sun.tools.javac.parser.Tokens.Comment.CommentStyle;
 import com.sun.tools.javac.resources.CompilerProperties.Errors;
 import com.sun.tools.javac.resources.CompilerProperties.Fragments;
+import com.sun.tools.javac.resources.CompilerProperties.Helps;
+import com.sun.tools.javac.resources.CompilerProperties.Infos;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -48,7 +50,6 @@ import com.sun.tools.javac.util.JCDiagnostic.DiagnosticFlag;
 import com.sun.tools.javac.util.JCDiagnostic.Error;
 import com.sun.tools.javac.util.JCDiagnostic.Fragment;
 import com.sun.tools.javac.util.JCDiagnostic.RangeDiagnosticPosition;
-import com.sun.tools.javac.util.JCDiagnostic.SimpleDiagnosticPosition;
 import com.sun.tools.javac.util.List;
 
 import static com.sun.tools.javac.parser.Tokens.TokenKind.*;
@@ -584,7 +585,7 @@ public class JavacParser implements Parser {
                     token.pos,
                     Errors.AssertAsIdentifier,
                     new Help(
-                            Fragments.HelpRenameTheIdentifier,
+                            Helps.RenameTheIdentifier,
                             List.of(new SuggestedChange(
                                     log.currentSource(),
                                     new RangeDiagnosticPosition(token.pos, token.endPos),
@@ -686,8 +687,8 @@ public class JavacParser implements Parser {
                     log.error(DiagnosticFlag.SYNTAX,
                               token.pos,
                               Errors.IntNumberTooLarge(strval(prefix)),
-                              new Info(Fragments.InfoIntNumberRange), new Help(
-                                    Fragments.HelpUseLongIntegerLiteral,
+                              new Info(Infos.IntNumberRange), new Help(
+                                    Helps.UseLongIntegerLiteral,
                                     List.of(new SuggestedChange(
                                             log.currentSource(),
                                             new RangeDiagnosticPosition(token.pos, token.endPos),
@@ -699,7 +700,7 @@ public class JavacParser implements Parser {
                     log.error(DiagnosticFlag.SYNTAX,
                               token.pos,
                               Errors.IntNumberTooLarge(strval(prefix)),
-                              new Info(Fragments.InfoLongNumberRange));
+                              new Info(Infos.LongNumberRange));
                 }
             }
             break;
@@ -709,7 +710,7 @@ public class JavacParser implements Parser {
                     TypeTag.LONG,
                     Long.valueOf(Convert.string2long(strval(prefix), token.radix())));
             } catch (NumberFormatException ex) {
-                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.IntNumberTooLarge(strval(prefix)), new Info(Fragments.InfoLongNumberRange));
+                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.IntNumberTooLarge(strval(prefix)), new Info(Infos.LongNumberRange));
             }
             break;
         case FLOATLITERAL: {

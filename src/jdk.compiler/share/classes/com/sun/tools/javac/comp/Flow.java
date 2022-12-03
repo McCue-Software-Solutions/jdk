@@ -39,7 +39,9 @@ import com.sun.source.tree.LambdaExpressionTree.BodyKind;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Scope.WriteableScope;
 import com.sun.tools.javac.code.Source.Feature;
+import com.sun.tools.javac.resources.CompilerProperties;
 import com.sun.tools.javac.resources.CompilerProperties.Errors;
+import com.sun.tools.javac.resources.CompilerProperties.Infos;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.util.*;
@@ -1157,7 +1159,7 @@ public class Flow {
                             log.error(
                                     exit.tree.pos(),
                                     Errors.UnreportedExceptionNeedToCatchOrThrow(thrownExit.thrown),
-                                    new Info(Fragments.InfoFunctionDeclaredHere, List.of(new InfoPosition( log.currentSource(), thrownExit.declMethod.pos())))
+                                    new Info(Infos.FunctionDeclaredHere, List.of(new InfoPosition(log.currentSource(), thrownExit.declMethod.pos())))
                             );
                         }
                         log.error(exit.tree.pos(), Errors.UnreportedExceptionNeedToCatchOrThrow(thrownExit.thrown));

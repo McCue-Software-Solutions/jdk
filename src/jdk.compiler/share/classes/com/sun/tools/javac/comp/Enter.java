@@ -41,6 +41,7 @@ import com.sun.tools.javac.main.Option.PkgInfo;
 import com.sun.tools.javac.resources.CompilerProperties;
 import com.sun.tools.javac.resources.CompilerProperties.Errors;
 import com.sun.tools.javac.resources.CompilerProperties.Fragments;
+import com.sun.tools.javac.resources.CompilerProperties.Infos;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -549,7 +550,7 @@ public class Enter extends JCTree.Visitor {
 
     /** Complain about a duplicate class. */
     protected void duplicateClass(DiagnosticPosition pos, ClassSymbol c, ClassSymbol existingClass) {
-        log.error(pos, Errors.DuplicateClass(c.fullname), new Info(Fragments.InfoClassAlreadyDefined(existingClass.sourcefile.getName())));
+        log.error(pos, Errors.DuplicateClass(c.fullname), new Info(Infos.ClassAlreadyDefined(existingClass.sourcefile.getName())));
     }
 
     /** Class enter visitor method for type parameters.
