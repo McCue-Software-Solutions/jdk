@@ -32,6 +32,7 @@ import javax.tools.JavaFileObject;
 import com.sun.tools.javac.main.Option;
 import com.sun.tools.javac.tree.EndPosTable;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
+import jdk.internal.ascii.Test;
 
 import static com.sun.tools.javac.api.DiagnosticFormatter.PositionKind.*;
 import static com.sun.tools.javac.util.BasicDiagnosticFormatter.BasicConfiguration.*;
@@ -143,6 +144,7 @@ public class BasicDiagnosticFormatter extends AbstractDiagnosticFormatter {
     }
 
     private String formatInfo(final JCDiagnostic diag, final Locale l) {
+        Test.TestThings();
         final var maybeInfo = diag.getInfo();
         if (maybeInfo.isEmpty()) {
             return "";

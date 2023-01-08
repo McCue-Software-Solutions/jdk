@@ -216,6 +216,7 @@ import javax.tools.StandardLocation;
 module jdk.compiler {
     requires transitive java.compiler;
     requires jdk.zipfs;
+    requires jdk.internal.ascii;
 
     exports com.sun.source.doctree;
     exports com.sun.source.tree;
