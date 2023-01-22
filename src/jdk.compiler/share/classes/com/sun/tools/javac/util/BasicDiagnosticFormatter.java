@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import javax.tools.JavaFileObject;
 
+import com.sun.tools.javac.formatting.PrettyCodePrinter;
 import com.sun.tools.javac.main.Option;
 import com.sun.tools.javac.tree.EndPosTable;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
@@ -161,30 +162,13 @@ public class BasicDiagnosticFormatter extends AbstractDiagnosticFormatter {
 
         for (final InfoPosition displayPos : info.positions()) {
             buf.append("\n");
+            buf.append(formatSource(diag, true, l));
+            buf.append("\n");
 
             final var source = displayPos.source();
             final var startPos = displayPos.position().getStartPosition();
-            final var endPos = endPosition(displayPos.position(), source.getEndPosTable());
-
-            buf.append(formatSource(diag, true, l));
-            buf.append(":");
-            final var startLineNumber = source.getLineNumber(startPos);
-            buf.append(startLineNumber);
-
-            if (endPos.isPresent()) {
-                final var endLineNumber = source.getLineNumber(endPos.getAsInt());
-                if (endLineNumber != startLineNumber) {
-                    buf.append("-");
-                    buf.append(endLineNumber);
-                }
-            }
-            buf.append("\n");
-
-            // get the lines from the start to the end positions, unless there's no end position
-            // then just get the line for the start position
-            final var sourceLines = source.getLines(startPos, endPos.orElse(startPos));
-
-            buf.append(sourceLines);
+            final var endPos = endPosition(displayPos.position(), source.getEndPosTable()).orElse(startPos);
+            buf.append(PrettyCodePrinter.SourceLines(source, startPos, endPos));
         }
 
         return buf.toString();
@@ -202,29 +186,12 @@ public class BasicDiagnosticFormatter extends AbstractDiagnosticFormatter {
         buf.append("\n");
 
         for (final SuggestedChange change : help.suggestedChanges()) {
-            final var source = change.source();
-
-            final var changeStartPos = change.position().getStartPosition();
-            final var changeEndPos = change.position().getEndPosition();
-
-            // get all the lines containing the start and, if it exists, the end position
-            final var sourceLines = source.getLines(changeStartPos, changeEndPos);
-
-            if (sourceLines == null) {
-                // TODO(fancy-diags)
-                throw new IllegalArgumentException("source not found");
-            }
-
-            // The position will always be present if we get here, since the source line was found
-            @SuppressWarnings("OptionalGetWithoutIsPresent")
-            final var lineStartPos = source.getLineStartPos(changeStartPos).getAsInt();
-            final var startOffset = changeStartPos - lineStartPos;
-            final var endOffset = changeEndPos - lineStartPos;
-
-            final var sb = new StringBuilder(sourceLines);
-            sb.replace(startOffset, endOffset, change.replacement());
-
-            buf.append(sb);
+            buf.append(PrettyCodePrinter.SourceLinesWithReplacement(
+                    change.source(),
+                    change.position().getStartPosition(),
+                    change.position().getEndPosition(),
+                    change.replacement()
+            ));
             buf.append("\n");
         }
         return buf.toString();

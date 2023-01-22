@@ -28,6 +28,7 @@ package com.sun.tools.javac.util;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.nio.CharBuffer;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.OptionalInt;
 import javax.tools.JavaFileObject;
@@ -129,27 +130,42 @@ public class DiagnosticSource {
         }
     }
 
-    public String getLines(final int startPos, final int endPos) {
+    public record SourceLine(String line, int startPos, int endPos) {}
+
+    public ArrayList<SourceLine> getLines(final int startPos, final int endPos) {
         final var startLineStartPos = getLineStartPos(startPos);
         final var endLineEndPos = getLineEndPos(endPos);
         if (startLineStartPos.isEmpty() || endLineEndPos.isEmpty()) {
             return null;
         }
 
+        final var lines = new ArrayList<SourceLine>();
+        var pos = startPos;
         try {
-            final char[] buf;
-            if (refBuf != null) {
-                buf = refBuf.get();
-            } else {
-                buf = initBuf(fileObject);
-            }
+            while (pos <= endPos && findLine(pos)) {
+                int lineEnd = lineStart;
+                while (lineEnd < bufLen && buf[lineEnd] != CR && buf[lineEnd] != LF) {
+                    lineEnd++;
+                }
 
-            return new String(buf, startLineStartPos.getAsInt(), endLineEndPos.getAsInt() - startLineStartPos.getAsInt());
-        } catch (final IOException e) {
-            log.directError("source.unavailable");
-            buf = new char[0];
-            return null;
+                if (lineEnd == lineStart) {
+                    break;
+                }
+
+                final var line = new SourceLine(new String(buf, lineStart, lineEnd - lineStart), lineStart, lineEnd);
+                lines.add(line);
+
+                // strip trailing whitespace for the next line
+                while (lineEnd < bufLen && (buf[lineEnd] == CR || buf[lineEnd] == LF)) {
+                    lineEnd++;
+                }
+                pos = lineEnd;
+            }
+        } finally {
+            buf = null;
         }
+
+        return lines;
     }
 
     /** Returns the position representing the start of the line that contains the given pos
