@@ -31,6 +31,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.Modifier;
 import javax.tools.JavaFileObject;
 
 import com.sun.source.tree.CaseTree;
@@ -58,8 +59,11 @@ import static com.sun.tools.javac.resources.CompilerProperties.Fragments.Diamond
 import static com.sun.tools.javac.resources.CompilerProperties.Fragments.DiamondInvalidArg;
 import static com.sun.tools.javac.resources.CompilerProperties.Fragments.DiamondInvalidArgs;
 
+import com.sun.tools.javac.resources.CompilerProperties;
 import com.sun.tools.javac.resources.CompilerProperties.Errors;
 import com.sun.tools.javac.resources.CompilerProperties.Fragments;
+import com.sun.tools.javac.resources.CompilerProperties.Helps;
+import com.sun.tools.javac.resources.CompilerProperties.Infos;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -69,6 +73,7 @@ import com.sun.tools.javac.util.DefinedBy.Api;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.Error;
 import com.sun.tools.javac.util.JCDiagnostic.Fragment;
+import com.sun.tools.javac.util.JCDiagnostic.RangeDiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.Warning;
 import com.sun.tools.javac.util.List;
 
@@ -1005,7 +1010,7 @@ public class Attr extends JCTree.Visitor {
             chk.checkOverride(env, tree, m);
 
             if (isDefaultMethod && types.overridesObjectMethod(m.enclClass(), m)) {
-                log.error(tree, Errors.DefaultOverridesObjectMember(m.name, Kinds.kindName(m.location()), m.location()));
+                log.error(tree, Errors.DefaultOverridesObjectMember(m.name, kindName(m.location()), m.location()));
             }
 
             // Enter all type parameters into the local method scope.
@@ -1090,18 +1095,30 @@ public class Attr extends JCTree.Visitor {
                          */
                         if ((tree.sym.flags_field & GENERATEDCONSTR) == 0) {
                             if (Check.protection(m.flags()) > Check.protection(env.enclClass.sym.flags())) {
-                                log.error(tree,
+                                var flagsString = "";
+
+                                // there can only be 0 or 1 access modifiers
+                                final var modifierSet = asModifierSet(env.enclClass.sym.flags() & AccessFlags);
+                                if (modifierSet.size() > 0) {
+                                    flagsString = modifierSet.iterator().next().toString();
+                                }
+
+                                final var replaceHelp = new Help(Helps.RecordReplaceCtorModifier, List.of(new SuggestedChange(
+                                        log.currentSource(),
+                                        new RangeDiagnosticPosition(
+                                                tree.mods.getStartPosition(),
+                                                tree.mods.getEndPosition(env.toplevel.endPositions)
+                                        ),
+                                        flagsString,
+                                        Applicability.MACHINE_APPLICABLE
+                                )));
+                                log.error(
+                                        tree,
+                                        Errors.RecordCanonicalCtorStrongerAccess(env.enclClass.sym.name),
                                         (env.enclClass.sym.flags() & AccessFlags) == 0 ?
-                                            Errors.InvalidCanonicalConstructorInRecord(
-                                                Fragments.Canonical,
-                                                env.enclClass.sym.name,
-                                                Fragments.CanonicalMustNotHaveStrongerAccess("package")
-                                            ) :
-                                            Errors.InvalidCanonicalConstructorInRecord(
-                                                    Fragments.Canonical,
-                                                    env.enclClass.sym.name,
-                                                    Fragments.CanonicalMustNotHaveStrongerAccess(asFlagSet(env.enclClass.sym.flags() & AccessFlags))
-                                            )
+                                            new Info(Infos.AccessModifierWas("package")):
+                                            new Info(Infos.AccessModifierWas(modifierSet)),
+                                        replaceHelp
                                 );
                             }
 

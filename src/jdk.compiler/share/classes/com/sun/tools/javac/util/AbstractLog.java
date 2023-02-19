@@ -132,6 +132,14 @@ public abstract class AbstractLog {
         report(diags.error(null, source, pos, errorKey, info));
     }
 
+    public void error(DiagnosticPosition pos, Error errorKey, Help help) {
+        report(diags.error(null, source, pos, errorKey, help));
+    }
+
+    public void error(DiagnosticPosition pos, Error errorKey, Info info, Help help) {
+        report(diags.error(null, source, pos, errorKey, info, help));
+    }
+
 
     /** Report an error, unless another error was already reported at same
      *  source position.

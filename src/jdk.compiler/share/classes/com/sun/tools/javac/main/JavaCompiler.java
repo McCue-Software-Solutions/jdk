@@ -426,7 +426,7 @@ public class JavaCompiler {
         lineDebugInfo = options.isUnset(G_CUSTOM) ||
                         options.isSet(G_CUSTOM, "lines");
         genEndPos     = options.isSet(XJCOV) ||
-                        context.get(DiagnosticListener.class) != null;
+                        context.get(DiagnosticListener.class) != null || true;
         devVerbose    = options.isSet("dev");
         processPcks   = options.isSet("process.packages");
         werror        = options.isSet(WERROR);

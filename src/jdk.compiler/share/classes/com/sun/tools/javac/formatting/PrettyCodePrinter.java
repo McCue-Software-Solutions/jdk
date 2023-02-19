@@ -50,7 +50,7 @@ public class PrettyCodePrinter {
 
                 // the offsets into the replacement string to use
                 final var replacementOffsetStart = lineReplaceStart - replacementStartPos;
-                final var replacementOffsetEnd = lineReplaceEnd - replacementStartPos;
+                final var replacementOffsetEnd = Math.min(lineReplaceEnd - replacementStartPos, replacement.length() - 1);
 
                 // offsets into the line that will be replaced
                 final var lineOffsetStart = lineReplaceStart - sourceLine.startPos();
@@ -66,7 +66,7 @@ public class PrettyCodePrinter {
                 // add in fancy underlines
                 sb.append(" ".repeat(lineNumLen + 2));
                 sb.append(" ".repeat(lineOffsetStart));
-                sb.append("~".repeat(lineOffsetEnd - lineOffsetStart + 1));
+                sb.append("~".repeat(replacementOffsetEnd - replacementOffsetStart + 1));
             } else {
                 // no replacement for this line
                 sb.append(sourceLine.line());
