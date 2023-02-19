@@ -4031,9 +4031,6 @@ public class Resolve {
             super(kind, debugName);
         }
 
-        // TODO (pretty-diags): tune this and the arguments for the Levenshtein distance better
-        private final static int SUGGESTION_DISTANCE_THRESHOLD = 5;
-
         @Override
         JCDiagnostic getDiagnostic(JCDiagnostic.DiagnosticType dkind,
                 DiagnosticPosition pos,
@@ -4065,7 +4062,9 @@ public class Resolve {
             final var closestMember = getClosestMember(env, name, typeargtypes, argtypes);
             final var closestDistance = closestMember.distance();
 
-            var suggestMember = (closestDistance <= SUGGESTION_DISTANCE_THRESHOLD) ? closestMember.symbol() : null;
+            // only suggest symbols that are no more than 1/3 of the symbol distance
+            final var distanceThreshold = Math.max(name.length(), 3) / 3;
+            var suggestMember = (closestDistance <= distanceThreshold) ? closestMember.symbol() : null;
 
             if (hasLocation) {
                 var diag = diags.create(dkind, log.currentSource(), pos,
@@ -4114,6 +4113,39 @@ public class Resolve {
             }
         }
 
+        private ArrayList<Symbol> GetSymbolsInScope(final Env<AttrContext> env) {
+            final var symbols = new ArrayList<Symbol>();
+            Env<AttrContext> env1 = env;
+            final Predicate<Symbol> nonSynthetic = symbol -> (symbol.flags_field & SYNTHETIC) == 0;
+            while (env1.outer != null) {
+                for (final var sym : env1.info.scope.getSymbols(nonSynthetic)) {
+                    symbols.add(sym);
+                }
+
+                // symbols for the enclosing class
+                for (final var sym : env1.enclClass.sym.members().getSymbols(nonSynthetic)) {
+                    symbols.add(sym);
+                }
+
+                env1 = env1.outer;
+            }
+
+            for (final var sym : syms.predefClass.members().getSymbols(nonSynthetic)) {
+                symbols.add(sym);
+            }
+
+            for (final var scope : new Scope[] { env.toplevel.namedImportScope, env.toplevel.starImportScope }) {
+                for (final var sym : scope.getSymbols(nonSynthetic)) {
+                    final var origin = scope.getOrigin(sym);
+                    if (origin != null && isAccessible(env, origin.owner.type, sym)) {
+                        symbols.add(sym);
+                    }
+                }
+            }
+
+            return symbols;
+        }
+
         private SymbolDistance getClosestMember(final Env<AttrContext> env,
                                                 final Name name,
                                                 final List<Type> typeParameterTypes,
@@ -4122,17 +4154,9 @@ public class Resolve {
             Symbol bestSymbol = null;
             var bestDistance = Integer.MAX_VALUE;
             
+            final var checkSymbols = GetSymbolsInScope(env);
+
             final var targetName = name.toString();
-
-            // get symbols from the current scope or from the enclosing class
-            final var checkSymbols = new ArrayList<Symbol>();
-            env.info.scope.getSymbols().forEach(checkSymbols::add);
-
-            final var enclClass = env.enclClass;
-            if (enclClass != null) {
-                enclClass.sym.members().getSymbols().forEach(checkSymbols::add);
-            }
-
             for (final var symbol : checkSymbols) {
                 final var tryName = symbol.isConstructor() ? symbol.owner.name.toString() : symbol.name.toString();
                 final var dist = Levenshtein.distance(targetName.toLowerCase(), tryName.toLowerCase());
@@ -4146,7 +4170,6 @@ public class Resolve {
                     final var symTypeParameters = symType.getTypeArguments();
                     final var symArgTypes = symType.getParameterTypes();
 
-                    // TODO (pretty-diags) use a distance function for comparison here too
                     if (types.isSameTypes(symTypeParameters, typeParameterTypes) && types.isSameTypes(symArgTypes, argTypes)) {
                         bestSymbol = symbol;
                     }
