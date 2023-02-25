@@ -296,7 +296,7 @@ public class BasicDiagnosticFormatter extends AbstractDiagnosticFormatter {
                             DiagnosticPart.DETAILS,
                             DiagnosticPart.SUBDIAGNOSTICS,
                             DiagnosticPart.SOURCE));
-            if (options.isSet(Option.PREVIEW)) {
+            if (options.isSet(Option.DIAGNOSTICS)) {
                 initFormatWithInfoAndHelp();
             }
             else {
