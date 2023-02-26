@@ -371,6 +371,7 @@ public enum Option {
     },
 
     PREVIEW("--enable-preview", "opt.preview", STANDARD, BASIC),
+    DIAGNOSTICS("--better-diagnostics", "opt.diagnostics", STANDARD, BASIC),
 
     PROFILE("-profile", "opt.arg.profile", "opt.profile", STANDARD, BASIC) {
         @Override
