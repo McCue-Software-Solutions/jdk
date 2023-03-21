@@ -2774,17 +2774,17 @@ public class Attr extends JCTree.Visitor {
                 List<JCAnnotation> annos = annoType.annotations;
 
                 if (annoType.underlyingType.hasTag(TYPEAPPLY)) {
-                    clazzid1 = make.at(tree.pos).
-                        TypeApply(clazzid1,
-                                  ((JCTypeApply) clazz).arguments);
+                    final var tyApply = (JCTypeApply) clazz;
+                    clazzid1 = make.at(tree.pos)
+                                   .TypeApply(clazzid1, tyApply.arguments, tyApply.tyLtPos, tyApply.tyGtPos);
                 }
 
                 clazzid1 = make.at(tree.pos).
                     AnnotatedType(annos, clazzid1);
             } else if (clazz.hasTag(TYPEAPPLY)) {
-                clazzid1 = make.at(tree.pos).
-                    TypeApply(clazzid1,
-                              ((JCTypeApply) clazz).arguments);
+                final var tyApply = (JCTypeApply) clazz;
+                clazzid1 = make.at(tree.pos)
+                               .TypeApply(clazzid1,tyApply.arguments, tyApply.tyLtPos, tyApply.tyGtPos);
             }
 
             clazz = clazzid1;
@@ -3764,12 +3764,34 @@ public class Attr extends JCTree.Visitor {
                     chk.checkRaw(that.expr, localEnv);
                 }
 
+                //static ref with class type-args
                 if (that.sym.isStatic() && TreeInfo.isStaticSelector(that.expr, names) &&
                         exprType.getTypeArguments().nonEmpty()) {
-                    //static ref with class type-args
-                    log.error(that.expr.pos(),
-                              Errors.InvalidMref(Kinds.kindName(that.getMode()),
-                                                 Fragments.StaticMrefWithTargs));
+                    if(that.expr instanceof JCTypeApply typeApply
+                       && typeApply.tyLtPos != Position.NOPOS
+                       && typeApply.tyGtPos != Position.NOPOS)
+                    {
+                        final var help = new Help(
+                            Helps.RemoveTheTyparams,
+                            List.of(
+                                new SuggestedChange(
+                                log.currentSource(),
+                                new RangeDiagnosticPosition(typeApply.tyLtPos, typeApply.tyGtPos),
+                    "",
+                                Applicability.MACHINE_APPLICABLE
+                            ))
+                        );
+                        log.error(
+                                that.expr.pos(),
+                                Errors.InvalidMref(Kinds.kindName(that.getMode()),Fragments.StaticMrefWithTargs),
+                                help
+                        );
+                    } else {
+                        log.error(
+                                that.expr.pos(),
+                                Errors.InvalidMref(Kinds.kindName(that.getMode()),Fragments.StaticMrefWithTargs)
+                        );
+                    }
                     result = that.type = types.createErrorType(currentTarget);
                     return;
                 }
