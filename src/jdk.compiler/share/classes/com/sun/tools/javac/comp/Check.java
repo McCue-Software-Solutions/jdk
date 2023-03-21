@@ -41,9 +41,12 @@ import com.sun.tools.javac.code.Directive.ExportsDirective;
 import com.sun.tools.javac.code.Directive.RequiresDirective;
 import com.sun.tools.javac.code.Source.Feature;
 import com.sun.tools.javac.comp.Annotate.AnnotationTypeMetadata;
+import com.sun.tools.javac.comp.Check.CycleChecker.SymbolPos;
 import com.sun.tools.javac.jvm.*;
+import com.sun.tools.javac.resources.CompilerProperties;
 import com.sun.tools.javac.resources.CompilerProperties.Errors;
 import com.sun.tools.javac.resources.CompilerProperties.Fragments;
+import com.sun.tools.javac.resources.CompilerProperties.Infos;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.util.*;
@@ -2302,7 +2305,27 @@ public class Check {
 
     class CycleChecker extends TreeScanner {
 
-        Set<Symbol> seenClasses = new HashSet<>();
+        // a combination of a symbol and its diagnostics position, hashed by the symbol
+        record SymbolPos(Symbol Sym, DiagnosticPosition Pos) {
+            @Override
+            public boolean equals(final Object o) {
+                if (this == o) {
+                    return true;
+                }
+                if (o == null || getClass() != o.getClass()) {
+                    return false;
+                }
+                final SymbolPos symbolPos = (SymbolPos) o;
+                return Objects.equals(Sym, symbolPos.Sym);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(Sym);
+            }
+        }
+
+        LinkedHashSet<SymbolPos> seenClasses = new LinkedHashSet<>();
         boolean errorFound = false;
         boolean partialCheck = false;
 
@@ -2365,12 +2388,14 @@ public class Check {
         void checkClass(DiagnosticPosition pos, Symbol c, List<JCTree> supertypes) {
             if ((c.flags_field & ACYCLIC) != 0)
                 return;
-            if (seenClasses.contains(c)) {
+
+            final var symPos = new SymbolPos(c, pos);
+            if (seenClasses.contains(symPos)) {
                 errorFound = true;
-                noteCyclic(pos, (ClassSymbol)c);
+                noteCyclic(pos, (ClassSymbol)c, seenClasses);
             } else if (!c.type.isErroneous()) {
                 try {
-                    seenClasses.add(c);
+                    seenClasses.add(symPos);
                     if (c.type.hasTag(CLASS)) {
                         if (supertypes.nonEmpty()) {
                             scan(supertypes);
@@ -2393,7 +2418,7 @@ public class Check {
                         }
                     }
                 } finally {
-                    seenClasses.remove(c);
+                    seenClasses.remove(symPos);
                 }
             }
         }
@@ -2444,7 +2469,7 @@ public class Check {
         if ((c.flags_field & ACYCLIC) != 0) return true;
 
         if ((c.flags_field & LOCKED) != 0) {
-            noteCyclic(pos, (ClassSymbol)c);
+            noteCyclic(pos, (ClassSymbol)c, null);
         } else if (!c.type.isErroneous()) {
             try {
                 c.flags_field |= LOCKED;
@@ -2471,9 +2496,24 @@ public class Check {
         return complete;
     }
 
-    /** Note that we found an inheritance cycle. */
-    private void noteCyclic(DiagnosticPosition pos, ClassSymbol c) {
-        log.error(pos, Errors.CyclicInheritance(c));
+    /** Note that we found an inheritance cycle.  seenClassOrder, if present, adds additional context to the error
+     * detailing the classes seen to form the dependency cycle.
+     * */
+    private void noteCyclic(DiagnosticPosition pos, ClassSymbol c, final LinkedHashSet<SymbolPos> seenClassOrder) {
+        if (seenClassOrder != null && seenClassOrder.size() > 0) {
+            final var sb = new StringBuilder();
+            final var positions = new ArrayList<InfoPosition>();
+            for (final var seen : seenClassOrder) {
+                positions.add(new InfoPosition(log.currentSource(), seen.Pos()));
+                sb.append(seen.Sym());
+                sb.append("->");
+            }
+            sb.append(seenClassOrder.iterator().next().Sym());
+
+            log.error(pos, Errors.CyclicInheritance(c), new Info(Infos.CyclicChain(sb.toString()), List.from(positions)));
+        } else {
+            log.error(pos, Errors.CyclicInheritance(c));
+        }
         for (List<Type> l=types.interfaces(c.type); l.nonEmpty(); l=l.tail)
             l.head = types.createErrorType((ClassSymbol)l.head.tsym, Type.noType);
         Type st = types.supertype(c.type);
