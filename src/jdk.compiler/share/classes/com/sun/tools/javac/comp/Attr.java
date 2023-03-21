@@ -1769,11 +1769,25 @@ public class Attr extends JCTree.Visitor {
                             attribExpr(expr, switchEnv, seltype);
                             matchBindings = new MatchBindings(matchBindings.bindingsWhenTrue, matchBindings.bindingsWhenFalse, true);
                         } else if (enumSwitch) {
-                            Symbol sym = enumConstant(expr, seltype);
-                            if (sym == null) {
-                                log.error(expr.pos(), Errors.EnumLabelMustBeUnqualifiedEnum);
-                            } else if (!constants.add(sym)) {
-                                log.error(label.pos(), Errors.DuplicateCaseLabel);
+                            // field accesses in an enum are not allowed
+                            if (expr.hasTag(SELECT)) {
+                                final var help = new Help(
+                                        Helps.RemoveQualification,
+                                        List.of(new SuggestedChange(
+                                                log.currentSource(),
+                                                new RangeDiagnosticPosition(constLabel.pos, constLabel.getEndPosition(env.toplevel.endPositions)),
+                                                ((JCFieldAccess) expr).name.toString(),
+                                                Applicability.MACHINE_APPLICABLE
+                                        ))
+                                );
+                                log.error(expr.pos(), Errors.EnumLabelMustBeUnqualifiedEnum, help);
+                            } else {
+                                Symbol sym = enumConstant(expr, seltype);
+                                if (sym == null) {
+                                    log.error(expr.pos(), Errors.EnumLabelMustBeUnqualifiedEnum);
+                                } else if (!constants.add(sym)) {
+                                    log.error(label.pos(), Errors.DuplicateCaseLabel);
+                                }
                             }
                         } else if (errorEnumSwitch) {
                             //error recovery: the selector is erroneous, and all the case labels
