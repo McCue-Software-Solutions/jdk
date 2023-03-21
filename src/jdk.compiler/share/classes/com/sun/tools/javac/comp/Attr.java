@@ -1143,17 +1143,40 @@ public class Attr extends JCTree.Visitor {
                          * record components
                          */
                         List<? extends RecordComponent> recordComponents = env.enclClass.sym.getRecordComponents();
-                        List<Type> recordFieldTypes = TreeInfo.recordFields(env.enclClass).map(vd -> vd.sym.type);
+                        var recordFields = TreeInfo.recordFields(env.enclClass);
                         for (JCVariableDecl param: tree.params) {
                             boolean paramIsVarArgs = (param.sym.flags_field & VARARGS) != 0;
-                            if (!types.isSameType(param.type, recordFieldTypes.head) ||
-                                    (recordComponents.head.isVarargs() != paramIsVarArgs)) {
-                                log.error(param, Errors.InvalidCanonicalConstructorInRecord(
-                                        Fragments.Canonical, env.enclClass.sym.name,
-                                        Fragments.TypeMustBeIdenticalToCorrespondingRecordComponentType));
+                            final var field = recordFields.head;
+                            final var fieldType = field.sym.type;
+                            if (!types.isSameType(param.type, fieldType)) {
+                                final var info = new Info(
+                                        Infos.RecordComponentCtorTypeConflict(field.name, fieldType, param.type),
+                                        List.of(new InfoPosition(log.currentSource(), field))
+                                );
+                                log.error(
+                                        param,
+                                        Errors.InvalidCanonicalConstructorInRecord1(
+                                                Fragments.Canonical,
+                                                env.enclClass.sym.name
+                                        ),
+                                        info
+                                );
+                            } else if (recordComponents.head.isVarargs() != paramIsVarArgs) {
+                                final var info = new Info(
+                                        Infos.RecordComponentCtorVarargsConflict(field.name),
+                                        List.of(new InfoPosition(log.currentSource(), field))
+                                );
+                                log.error(
+                                        param,
+                                        Errors.InvalidCanonicalConstructorInRecord1(
+                                                Fragments.Canonical,
+                                                env.enclClass.sym.name
+                                        ),
+                                        info
+                                );
                             }
                             recordComponents = recordComponents.tail;
-                            recordFieldTypes = recordFieldTypes.tail;
+                            recordFields = recordFields.tail;
                         }
                     }
                 }
