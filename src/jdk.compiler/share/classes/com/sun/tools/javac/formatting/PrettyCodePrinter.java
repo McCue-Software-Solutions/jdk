@@ -7,15 +7,23 @@ public class PrettyCodePrinter {
         final var sourceLines = source.getLines(startPos, endPos);
         var currentLineNum = source.getLineNumber(startPos);
         final var lineCount = sourceLines.size();
-        final var lineNumLen = Integer.toString(currentLineNum + lineCount).length();
+        final var lineNumLen = Integer.toString(currentLineNum + lineCount - 1).length();
 
         final var sb = new StringBuilder();
         for (final var sourceLine : sourceLines) {
+            final var line = sourceLine.line();
+            // skip blank lines, but still advance the line counter
+            if(line.isBlank()) {
+                currentLineNum += 1;
+                continue;
+            }
+
             sb.append(currentLineNum);
             sb.append(" ".repeat(lineNumLen - Integer.toString(currentLineNum).length()));
             sb.append("| ");
 
             sb.append(sourceLine.line());
+            sb.append("\n");
 
             currentLineNum += 1;
         }

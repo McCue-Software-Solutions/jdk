@@ -154,15 +154,14 @@ public class DiagnosticSource {
                     lineEnd++;
                 }
 
-                if (lineEnd == lineStart) {
-                    break;
-                }
-
                 final var line = new SourceLine(new String(buf, lineStart, lineEnd - lineStart), lineStart, lineEnd);
                 lines.add(line);
 
-                // strip trailing whitespace for the next line
-                while (lineEnd < bufLen && (buf[lineEnd] == CR || buf[lineEnd] == LF)) {
+                // strip exactly one trailing whitespace for the next line
+                if(buf[lineEnd] == CR) {
+                    lineEnd++;
+                }
+                if(buf[lineEnd] == LF) {
                     lineEnd++;
                 }
                 pos = lineEnd;

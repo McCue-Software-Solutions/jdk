@@ -47,6 +47,7 @@ import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.Error;
+import com.sun.tools.javac.util.JCDiagnostic.RangeDiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.Warning;
 
 import com.sun.tools.javac.code.Symbol.*;
@@ -1176,7 +1177,16 @@ public class Flow {
                             log.error(
                                     exit.tree.pos(),
                                     Errors.UnreportedExceptionNeedToCatchOrThrow(thrownExit.thrown),
-                                    new Info(Infos.FunctionDeclaredHere, List.of(new InfoPosition(log.currentSource(), thrownExit.declMethod.pos())))
+                                    new Info(
+                                            Infos.FunctionDeclaredHere,
+                                            List.of(new InfoPosition(
+                                                    log.currentSource(),
+                                                    new RangeDiagnosticPosition(
+                                                            thrownExit.declMethod.getStartPosition(),
+                                                            thrownExit.declMethod.body.pos
+                                                    )
+                                            ))
+                                    )
                             );
                         }
                         log.error(exit.tree.pos(), Errors.UnreportedExceptionNeedToCatchOrThrow(thrownExit.thrown));

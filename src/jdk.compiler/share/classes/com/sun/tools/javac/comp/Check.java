@@ -54,6 +54,7 @@ import com.sun.tools.javac.util.JCDiagnostic.DiagnosticFlag;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.Error;
 import com.sun.tools.javac.util.JCDiagnostic.Fragment;
+import com.sun.tools.javac.util.JCDiagnostic.RangeDiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.Warning;
 import com.sun.tools.javac.util.List;
 
@@ -2504,7 +2505,14 @@ public class Check {
             final var sb = new StringBuilder();
             final var positions = new ArrayList<InfoPosition>();
             for (final var seen : seenClassOrder) {
-                positions.add(new InfoPosition(log.currentSource(), seen.Pos()));
+                var classPos = seen.Pos();
+                // cut the positions at the end of the extends lists
+                if(classPos instanceof JCClassDecl classDecl) {
+                    final var endPos = classDecl.extending.getEndPosition(log.currentSource().getEndPosTable());
+                    classPos = new RangeDiagnosticPosition(classDecl.getStartPosition(), endPos);
+                }
+
+                positions.add(new InfoPosition(log.currentSource(), classPos));
                 sb.append(seen.Sym());
                 sb.append("->");
             }
