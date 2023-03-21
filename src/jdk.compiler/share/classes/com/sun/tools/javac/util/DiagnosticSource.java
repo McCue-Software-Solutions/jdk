@@ -143,6 +143,12 @@ public class DiagnosticSource {
         var pos = startPos;
         try {
             while (pos <= endPos && findLine(pos)) {
+                // if the end of the last line is at the end of the buffer, it means that the file
+                // did not have a trailing newline, and so we would be trying to get that line again
+                if (pos == bufLen) {
+                    break;
+                }
+
                 int lineEnd = lineStart;
                 while (lineEnd < bufLen && buf[lineEnd] != CR && buf[lineEnd] != LF) {
                     lineEnd++;
