@@ -436,7 +436,7 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         JCTypeApply t = (JCTypeApply) node;
         JCExpression clazz = copy(t.clazz, p);
         List<JCExpression> arguments = copy(t.arguments, p);
-        return M.at(t.pos).TypeApply(clazz, arguments);
+        return M.at(t.pos).TypeApply(clazz, arguments, t.tyLtPos, t.tyGtPos);
     }
 
     @DefinedBy(Api.COMPILER_TREE)

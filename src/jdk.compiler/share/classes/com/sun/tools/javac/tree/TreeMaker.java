@@ -561,8 +561,8 @@ public class TreeMaker implements JCTree.Factory {
         return tree;
     }
 
-    public JCTypeApply TypeApply(JCExpression clazz, List<JCExpression> arguments) {
-        JCTypeApply tree = new JCTypeApply(clazz, arguments);
+    public JCTypeApply TypeApply(JCExpression clazz, List<JCExpression> arguments, int tyLtPos, int tyGtPos) {
+        JCTypeApply tree = new JCTypeApply(clazz, arguments, tyLtPos, tyGtPos);
         tree.pos = pos;
         return tree;
     }
@@ -857,7 +857,7 @@ public class TreeMaker implements JCTree.Factory {
                         : QualIdent(t.tsym);
                 tp = t.getTypeArguments().isEmpty()
                         ? clazz
-                        : TypeApply(clazz, Types(t.getTypeArguments()));
+                        : TypeApply(clazz, Types(t.getTypeArguments()), Position.NOPOS, Position.NOPOS);
                 break;
             }
             }

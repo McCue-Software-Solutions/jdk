@@ -546,9 +546,13 @@ public class TypeEnter implements Completer {
          *  @param c                The class symbol of the enum
          */
         protected  JCExpression enumBase(int pos, ClassSymbol c) {
-            JCExpression result = make.at(pos).
-                TypeApply(make.QualIdent(syms.enumSym),
-                          List.of(make.Type(c.type)));
+            JCExpression result = make.at(pos)
+                                      .TypeApply(
+                                              make.QualIdent(syms.enumSym),
+                                              List.of(make.Type(c.type)),
+                                              Position.NOPOS,
+                                              Position.NOPOS
+                                      );
             return result;
         }
 

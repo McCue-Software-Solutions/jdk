@@ -1468,7 +1468,7 @@ public class JavacParser implements Parser {
                         if ((mode & TYPE) == 0 && isUnboundMemberRef()) {
                             //this is an unbound method reference whose qualifier
                             //is a generic type i.e. A<S>::m
-                            int pos1 = token.pos;
+                            final var ltPos = token.pos;
                             accept(LT);
                             ListBuffer<JCExpression> args = new ListBuffer<>();
                             args.append(typeArgument());
@@ -1477,7 +1477,8 @@ public class JavacParser implements Parser {
                                 args.append(typeArgument());
                             }
                             accept(GT);
-                            t = toP(F.at(pos1).TypeApply(t, args.toList()));
+                            final var gtPos = S.prevToken().endPos;
+                            t = toP(F.at(ltPos).TypeApply(t, args.toList(), ltPos, gtPos));
                             while (token.kind == DOT) {
                                 nextToken();
                                 selectTypeMode();
@@ -2246,7 +2247,7 @@ public class JavacParser implements Parser {
     JCTypeApply typeArguments(JCExpression t, boolean diamondAllowed) {
         int pos = token.pos;
         List<JCExpression> args = typeArguments(diamondAllowed);
-        return toP(F.at(pos).TypeApply(t, args));
+        return toP(F.at(pos).TypeApply(t, args, Position.NOPOS, Position.NOPOS));
     }
 
     /**

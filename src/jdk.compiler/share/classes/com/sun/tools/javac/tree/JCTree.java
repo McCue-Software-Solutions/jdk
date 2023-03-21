@@ -2805,9 +2805,15 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
     public static class JCTypeApply extends JCExpression implements ParameterizedTypeTree {
         public JCExpression clazz;
         public List<JCExpression> arguments;
-        protected JCTypeApply(JCExpression clazz, List<JCExpression> arguments) {
+
+        // The positions of the < and >
+        public int tyLtPos;
+        public int tyGtPos;
+        protected JCTypeApply(JCExpression clazz, List<JCExpression> arguments, int tyLtPos, int tyGtPos) {
             this.clazz = clazz;
             this.arguments = arguments;
+            this.tyLtPos = tyLtPos;
+            this.tyGtPos = tyGtPos;
         }
         @Override
         public void accept(Visitor v) { v.visitTypeApply(this); }
@@ -3480,7 +3486,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         JCLiteral Literal(TypeTag tag, Object value);
         JCPrimitiveTypeTree TypeIdent(TypeTag typetag);
         JCArrayTypeTree TypeArray(JCExpression elemtype);
-        JCTypeApply TypeApply(JCExpression clazz, List<JCExpression> arguments);
+        JCTypeApply TypeApply(JCExpression clazz, List<JCExpression> arguments, int tyLtPos, int tyGtPos);
         JCTypeParameter TypeParameter(Name name, List<JCExpression> bounds);
         JCWildcard Wildcard(TypeBoundKind kind, JCTree type);
         TypeBoundKind TypeBoundKind(BoundKind kind);
