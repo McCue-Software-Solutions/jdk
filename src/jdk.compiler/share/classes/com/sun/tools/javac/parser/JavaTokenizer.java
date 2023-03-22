@@ -35,7 +35,10 @@ import com.sun.tools.javac.parser.Tokens.Comment.CommentStyle;
 import com.sun.tools.javac.resources.CompilerProperties.Errors;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
 import com.sun.tools.javac.util.*;
+import com.sun.tools.javac.util.Help;
 import com.sun.tools.javac.util.JCDiagnostic.*;
+import com.sun.tools.javac.util.SuggestedChange;
+import com.sun.tools.javac.util.JCDiagnostic.RangeDiagnosticPosition;
 
 import java.nio.CharBuffer;
 import java.util.Set;
@@ -208,6 +211,25 @@ public class JavaTokenizer extends UnicodeReader {
         if (flags != DiagnosticFlag.SOURCE_LEVEL) {
             tk = TokenKind.ERROR;
         }
+        errPos = pos;
+    }
+
+    protected void lexErrorUnclosedChar(int pos) {
+        log.error(
+                DiagnosticFlag.SYNTAX,
+                pos,
+                Errors.UnclosedCharLit,
+                new Help(
+                        Helps.CloseChar,
+                        List.of(new SuggestedChange(
+                                log.currentSource(),
+                                new RangeDiagnosticPosition(pos, pos),
+                                "'",
+                                Applicability.UNKNOWN
+                        ))
+                )
+        );
+        tk = TokenKind.ERROR;
         errPos = pos;
     }
 
@@ -985,7 +1007,7 @@ public class JavaTokenizer extends UnicodeReader {
                         if (accept('\'')) {
                             tk = TokenKind.CHARLITERAL;
                         } else {
-                            lexError(pos, Errors.UnclosedCharLit);
+                            lexErrorUnclosedChar(pos);
                         }
                     }
                     break loop;
