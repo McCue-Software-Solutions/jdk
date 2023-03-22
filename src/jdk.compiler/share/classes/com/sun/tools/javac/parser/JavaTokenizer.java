@@ -1009,7 +1009,7 @@ public class JavaTokenizer extends UnicodeReader {
                         if (accept('\'')) {
                             tk = TokenKind.CHARLITERAL;
                         } else {
-                            lexErrorUnclosedChar(pos);
+                            lexErrorUnclosedChar(position());
                         }
                     }
                     break loop;
