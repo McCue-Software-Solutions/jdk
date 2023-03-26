@@ -130,6 +130,11 @@ public class JavaTokenizer extends UnicodeReader {
     protected StringBuilder sb;
 
     /**
+     * Buffer for holding the original source of literals.
+     */
+    protected StringBuilder origSb;
+
+    /**
      * Origin scanner factory.
      */
     protected ScannerFactory fac;
@@ -168,6 +173,7 @@ public class JavaTokenizer extends UnicodeReader {
         this.preview = fac.preview;
         this.lint = fac.lint;
         this.sb = new StringBuilder(256);
+        this.origSb = new StringBuilder(256);
     }
 
     /**
@@ -329,6 +335,15 @@ public class JavaTokenizer extends UnicodeReader {
         }
 
         return false;
+    }
+
+    // Puts a character into the original source buffer
+    protected void putSourceChar() {
+        if (isSurrogate()) {
+            origSb.appendCodePoint(getCodepoint());
+        } else {
+            origSb.append(get());
+        }
     }
 
     /**
@@ -501,6 +516,7 @@ public class JavaTokenizer extends UnicodeReader {
         int trailingUnderscorePos;
 
         do {
+            putSourceChar();
             if (!is('_')) {
                 put();
                 trailingUnderscorePos = NOT_FOUND;
@@ -1071,6 +1087,7 @@ public class JavaTokenizer extends UnicodeReader {
             } else {
                 // Get characters from string buffer.
                 String string = sb.toString();
+                final var origString = origSb.toString();
 
                 // If a text block.
                 if (isTextBlock) {
@@ -1106,10 +1123,10 @@ public class JavaTokenizer extends UnicodeReader {
 
                 if (tk.tag == Token.Tag.STRING) {
                     // Build string token.
-                    return new StringToken(tk, pos, endPos, string, comments);
+                    return new StringToken(tk, pos, endPos, string, origString, comments);
                 } else {
                     // Build numeric token.
-                    return new NumericToken(tk, pos, endPos, string, radix, comments);
+                    return new NumericToken(tk, pos, endPos, string, radix, origString, comments);
                 }
             }
         } finally {

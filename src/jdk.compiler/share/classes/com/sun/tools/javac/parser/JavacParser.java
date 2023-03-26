@@ -693,7 +693,7 @@ public class JavacParser implements Parser {
                                     List.of(new SuggestedChange(
                                             log.currentSource(),
                                             new RangeDiagnosticPosition(token.pos, token.endPos),
-                                            strval(prefix) + "L",
+                                            ((StringToken) token).sourceString + "L",
                                             Applicability.MACHINE_APPLICABLE
                                     ))
                             ));
