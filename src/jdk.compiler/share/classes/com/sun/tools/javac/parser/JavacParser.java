@@ -701,7 +701,9 @@ public class JavacParser implements Parser {
                     log.error(DiagnosticFlag.SYNTAX,
                               token.pos,
                               Errors.IntNumberTooLarge(strval(prefix)),
-                              new Info(Infos.LongNumberRange));
+                              new Info(Infos.LongNumberRange),
+                              new Help(Helps.UseDoubleBigint)
+                    );
                 }
             }
             break;
@@ -711,7 +713,13 @@ public class JavacParser implements Parser {
                     TypeTag.LONG,
                     Long.valueOf(Convert.string2long(strval(prefix), token.radix())));
             } catch (NumberFormatException ex) {
-                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.IntNumberTooLarge(strval(prefix)), new Info(Infos.LongNumberRange));
+                log.error(
+                        DiagnosticFlag.SYNTAX,
+                        token.pos,
+                        Errors.IntNumberTooLarge(strval(prefix)),
+                        new Info(Infos.LongNumberRange),
+                        new Help(Helps.UseDoubleBigint)
+                );
             }
             break;
         case FLOATLITERAL: {
