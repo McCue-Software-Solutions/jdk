@@ -373,19 +373,26 @@ public class JavaTokenizer extends UnicodeReader {
      * @param pos position of the first character in literal.
      */
     private void scanLitChar(int pos) {
-        if (acceptThenPut('\\')) {
+        if(is('\\')) {
+            put();
+            putSourceChar();
+            next();
+
             hasEscapeSequences = true;
 
             switch (get()) {
                 case '0': case '1': case '2': case '3':
                 case '4': case '5': case '6': case '7':
                     char leadch = get();
+                    putSourceChar();
                     putThenNext();
 
                     if (inRange('0', '7')) {
+                        putSourceChar();
                         putThenNext();
 
                         if (leadch <= '3' && inRange('0', '7')) {
+                            putSourceChar();
                             putThenNext();
                         }
                     }
@@ -399,11 +406,13 @@ public class JavaTokenizer extends UnicodeReader {
                 case '\'':
                 case '\"':
                 case '\\':
+                    putSourceChar();
                     putThenNext();
                     break;
 
                 case 's':
                     checkSourceLevel(position(), Feature.TEXT_BLOCKS);
+                    putSourceChar();
                     putThenNext();
                     break;
 
@@ -423,6 +432,7 @@ public class JavaTokenizer extends UnicodeReader {
                     break;
             }
         } else {
+            putSourceChar();
             putThenNext();
         }
     }
