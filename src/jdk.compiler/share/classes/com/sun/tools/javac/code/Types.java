@@ -26,13 +26,7 @@
 package com.sun.tools.javac.code;
 
 import java.lang.ref.SoftReference;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -51,6 +45,9 @@ import com.sun.tools.javac.comp.Enter;
 import com.sun.tools.javac.comp.Env;
 import com.sun.tools.javac.comp.LambdaToMethod;
 import com.sun.tools.javac.jvm.ClassFile;
+import com.sun.tools.javac.resources.CompilerProperties;
+import com.sun.tools.javac.resources.CompilerProperties.Infos;
+import com.sun.tools.javac.tree.TreeInfo;
 import com.sun.tools.javac.util.*;
 
 import static com.sun.tools.javac.code.BoundKind.*;
@@ -63,6 +60,7 @@ import static com.sun.tools.javac.code.Type.*;
 import static com.sun.tools.javac.code.TypeTag.*;
 import static com.sun.tools.javac.jvm.ClassFile.externalize;
 import com.sun.tools.javac.resources.CompilerProperties.Fragments;
+import com.sun.tools.javac.util.List;
 
 /**
  * Utility class containing various operations on types.
@@ -95,6 +93,7 @@ public class Types {
     final Check chk;
     final Enter enter;
     JCDiagnostic.Factory diags;
+    final Log log;
     List<Warner> warnStack = List.nil();
     final Name capturedName;
 
@@ -120,6 +119,7 @@ public class Types {
         diags = JCDiagnostic.Factory.instance(context);
         noWarnings = new Warner(null);
         qualifiedSymbolCache = new HashMap<>();
+        log = Log.instance(context);
     }
     // </editor-fold>
 
@@ -637,15 +637,10 @@ public class Types {
     public static class FunctionDescriptorLookupError extends RuntimeException {
         private static final long serialVersionUID = 0;
 
-        transient JCDiagnostic diagnostic;
+        transient final JCDiagnostic diagnostic;
 
-        FunctionDescriptorLookupError() {
-            this.diagnostic = null;
-        }
-
-        FunctionDescriptorLookupError setMessage(JCDiagnostic diag) {
-            this.diagnostic = diag;
-            return this;
+        FunctionDescriptorLookupError(JCDiagnostic diagnostic) {
+            this.diagnostic = diagnostic;
         }
 
         public JCDiagnostic getDiagnostic() {
@@ -739,6 +734,7 @@ public class Types {
                 throw failure("not.a.functional.intf", origin);
             }
 
+            var incompatibleAbstracts = false;
             final ListBuffer<Symbol> abstracts = new ListBuffer<>();
             for (Symbol sym : membersCache.getSymbols(new DescriptorFilter(origin))) {
                 Type mtype = memberType(origin.type, sym);
@@ -752,11 +748,30 @@ public class Types {
                         abstracts.append(sym);
                     }
                 } else {
-                    //the target method(s) should be the only abstract members of t
-                    throw failure("not.a.functional.intf.1",  origin,
-                            diags.fragment(Fragments.IncompatibleAbstracts(Kinds.kindName(origin), origin)));
+                    // don't immediately break so that the abstract methods can be collected
+                   incompatibleAbstracts = true;
+                   abstracts.append(sym);
                 }
             }
+
+            final var env = enter.getEnv(origin);
+            if(incompatibleAbstracts && env != null) {
+                final var failure = failure(
+                        "not.a.functional.intf.1",
+                        origin,
+                        diags.fragment(Fragments.IncompatibleAbstracts(Kinds.kindName(origin), origin))
+                );
+
+                final var positions = new ListBuffer<InfoPosition>();
+                for (final var abstractMethod : abstracts) {
+                    final var pos = TreeInfo.diagnosticPositionFor(abstractMethod, env.tree);
+                    positions.append(new InfoPosition(log.currentSource(), pos));
+                }
+                final var info = new Info(Infos.FunctionalIntfIncompatibleAbstracts, positions.toList());
+
+                throw new FunctionDescriptorLookupError(failure.diagnostic.withInfo(info));
+            }
+
             if (abstracts.isEmpty()) {
                 //t must define a suitable non-generic method
                 throw failure("not.a.functional.intf.1", origin,
@@ -804,12 +819,16 @@ public class Types {
                     }).orElse(null);
         }
 
+        FunctionDescriptorLookupError failure(String msg, Info info, Object... args) {
+            return new FunctionDescriptorLookupError(diags.fragment(msg, args).withInfo(info));
+        }
+
         FunctionDescriptorLookupError failure(String msg, Object... args) {
             return failure(diags.fragment(msg, args));
         }
 
         FunctionDescriptorLookupError failure(JCDiagnostic diag) {
-            return new FunctionDescriptorLookupError().setMessage(diag);
+            return new FunctionDescriptorLookupError(diag);
         }
     }
 
