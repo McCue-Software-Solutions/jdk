@@ -65,6 +65,8 @@ import static com.sun.tools.javac.resources.CompilerProperties.Fragments.Implici
 import static com.sun.tools.javac.resources.CompilerProperties.Fragments.VarAndExplicitNotAllowed;
 import static com.sun.tools.javac.resources.CompilerProperties.Fragments.VarAndImplicitNotAllowed;
 import com.sun.tools.javac.util.JCDiagnostic.SimpleDiagnosticPosition;
+
+import javax.tools.Diagnostic;
 import java.util.function.BiFunction;
 
 /**
@@ -4105,7 +4107,7 @@ public class JavacParser implements Parser {
         accept(CLASS);
         Name name = typeName();
 
-        List<JCTypeParameter> typarams = typeParametersOpt();
+        List<JCTypeParameter> typarams = typeParametersOpt().TyParams();
 
         JCExpression extending = null;
         if (token.kind == EXTENDS) {
@@ -4131,7 +4133,7 @@ public class JavacParser implements Parser {
         mods.flags |= Flags.RECORD;
         Name name = typeName();
 
-        List<JCTypeParameter> typarams = typeParametersOpt();
+        List<JCTypeParameter> typarams = typeParametersOpt().TyParams();
 
         List<JCVariableDecl> headerFields = formalParameters(false, true);
 
@@ -4191,7 +4193,7 @@ public class JavacParser implements Parser {
 
         Name name = typeName();
 
-        List<JCTypeParameter> typarams = typeParametersOpt();
+        List<JCTypeParameter> typarams = typeParametersOpt().TyParams();
 
         List<JCExpression> extending = List.nil();
         if (token.kind == EXTENDS) {
@@ -4230,7 +4232,7 @@ public class JavacParser implements Parser {
         Name name = typeName();
 
         int typeNamePos = token.pos;
-        List<JCTypeParameter> typarams = typeParametersOpt(true);
+        List<JCTypeParameter> typarams = typeParametersOpt(true).TyParams();
         if (typarams == null || !typarams.isEmpty()) {
             int errorPosition = typarams == null
                     ? typeNamePos
@@ -4479,7 +4481,8 @@ public class JavacParser implements Parser {
                 return List.of(block(pos, mods.flags));
             } else {
                 pos = token.pos;
-                List<JCTypeParameter> typarams = typeParametersOpt();
+                final var tyParamsData = typeParametersOpt();
+                List<JCTypeParameter> typarams = tyParamsData.TyParams();
                 // if there are type parameters but no modifiers, save the start
                 // position of the method in the modifiers.
                 if (typarams.nonEmpty() && mods.pos == Position.NOPOS) {
@@ -4515,7 +4518,7 @@ public class JavacParser implements Parser {
                         mods.flags |= Flags.COMPACT_RECORD_CONSTRUCTOR;
                     }
                     return List.of(methodDeclaratorRest(
-                        pos, mods, null, names.init, typarams,
+                        pos, mods, null, names.init, tyParamsData,
                         isInterface, true, isRecord, dc));
                 } else if (isRecord && type.hasTag(IDENT) && token.kind == THROWS) {
                     // trying to define a compact constructor with a throws clause
@@ -4526,14 +4529,14 @@ public class JavacParser implements Parser {
                                     Fragments.ThrowsClauseNotAllowedForCanonicalConstructor(Fragments.Compact)));
                     skip(false, true, false, false);
                     return List.of(methodDeclaratorRest(
-                            pos, mods, null, names.init, typarams,
+                            pos, mods, null, names.init, tyParamsData,
                             isInterface, true, isRecord, dc));
                 } else {
                     pos = token.pos;
                     Name name = ident();
                     if (token.kind == LPAREN) {
                         return List.of(methodDeclaratorRest(
-                            pos, mods, type, name, typarams,
+                            pos, mods, type, name, tyParamsData,
                             isInterface, isVoid, false, dc));
                     } else if (!isVoid && typarams.isEmpty()) {
                         if (!isRecord || (isRecord && (mods.flags & Flags.STATIC) != 0)) {
@@ -4555,8 +4558,18 @@ public class JavacParser implements Parser {
                         List<JCTree> err;
                         if (isVoid || typarams.nonEmpty()) {
                             JCMethodDecl m =
-                                    toP(F.at(pos).MethodDef(mods, name, type, typarams,
-                                                            List.nil(), List.nil(), null, null));
+                                    toP(F.at(pos).MethodDef(
+                                            mods,
+                                            name,
+                                            type,
+                                            typarams,
+                                            tyParamsData.LtPos(),
+                                            tyParamsData.GtPos(),
+                                            List.nil(),
+                                            List.nil(),
+                                            null,
+                                            null
+                                    ));
                             attach(m, dc);
                             err = List.of(m);
                         } else {
@@ -4643,7 +4656,7 @@ public class JavacParser implements Parser {
                               JCModifiers mods,
                               JCExpression type,
                               Name name,
-                              List<JCTypeParameter> typarams,
+                              TyParams tyParamsData,
                               boolean isInterface, boolean isVoid,
                               boolean isRecord,
                               Comment dc) {
@@ -4689,9 +4702,19 @@ public class JavacParser implements Parser {
             }
 
             JCMethodDecl result =
-                    toP(F.at(pos).MethodDef(mods, name, type, typarams,
-                                            receiverParam, params, thrown,
-                                            body, defaultValue));
+                    toP(F.at(pos).MethodDef(
+                            mods,
+                            name,
+                            type,
+                            tyParamsData.TyParams(),
+                            tyParamsData.LtPos(),
+                            tyParamsData.GtPos(),
+                            receiverParam,
+                            params,
+                            thrown,
+                            body,
+                            defaultValue
+                    ));
             attach(result, dc);
             return result;
         } finally {
@@ -4727,19 +4750,22 @@ public class JavacParser implements Parser {
         return ts.toList();
     }
 
+    public record TyParams(int LtPos, int GtPos, List<JCTypeParameter> TyParams){};
+
     /**
      *  {@literal
      *  TypeParametersOpt = ["<" TypeParameter {"," TypeParameter} ">"]
      *  }
      */
-    protected List<JCTypeParameter> typeParametersOpt() {
+    protected TyParams typeParametersOpt() {
         return typeParametersOpt(false);
     }
     /** Parses a potentially empty type parameter list if needed with `allowEmpty`.
      *  The caller is free to choose the desirable error message in this (erroneous) case.
      */
-    protected List<JCTypeParameter> typeParametersOpt(boolean parseEmpty) {
+    protected TyParams typeParametersOpt(boolean parseEmpty) {
         if (token.kind == LT) {
+            final var ltPos = token.pos;
             ListBuffer<JCTypeParameter> typarams = new ListBuffer<>();
             nextToken();
 
@@ -4754,9 +4780,10 @@ public class JavacParser implements Parser {
                 typarams.append(typeParameter());
             }
             accept(GT);
-            return typarams.toList();
+            final var gtPos = S.prevToken().endPos;
+            return new TyParams(ltPos, gtPos, typarams.toList());
         } else {
-            return List.nil();
+            return new TyParams(Position.NOPOS, Position.NOPOS, List.nil());
         }
     }
 

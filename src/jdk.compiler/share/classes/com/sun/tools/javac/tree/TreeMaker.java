@@ -188,12 +188,14 @@ public class TreeMaker implements JCTree.Factory {
                                Name name,
                                JCExpression restype,
                                List<JCTypeParameter> typarams,
+                               int tyLtPos,
+                               int tyGtPos,
                                List<JCVariableDecl> params,
                                List<JCExpression> thrown,
                                JCBlock body,
                                JCExpression defaultValue) {
         return MethodDef(
-                mods, name, restype, typarams, null, params,
+                mods, name, restype, typarams, tyLtPos, tyGtPos, null, params,
                 thrown, body, defaultValue);
     }
 
@@ -201,6 +203,8 @@ public class TreeMaker implements JCTree.Factory {
                                Name name,
                                JCExpression restype,
                                List<JCTypeParameter> typarams,
+                               int tyLtPos,
+                               int tyGtPos,
                                JCVariableDecl recvparam,
                                List<JCVariableDecl> params,
                                List<JCExpression> thrown,
@@ -211,6 +215,8 @@ public class TreeMaker implements JCTree.Factory {
                                        name,
                                        restype,
                                        typarams,
+                                       tyLtPos,
+                                       tyGtPos,
                                        recvparam,
                                        params,
                                        thrown,
@@ -1034,6 +1040,8 @@ public class TreeMaker implements JCTree.Factory {
                 m.name,
                 m.name != names.init ? Type(mtype.getReturnType()) : null,
                 TypeParams(mtype.getTypeArguments()),
+                -1,
+                -1,
                 null, // receiver type
                 Params(mtype.getParameterTypes(), m),
                 Types(mtype.getThrownTypes()),
