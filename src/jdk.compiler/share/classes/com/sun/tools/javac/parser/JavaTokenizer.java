@@ -41,6 +41,7 @@ import com.sun.tools.javac.util.Help;
 import com.sun.tools.javac.util.JCDiagnostic.*;
 import com.sun.tools.javac.util.SuggestedChange;
 import com.sun.tools.javac.util.JCDiagnostic.RangeDiagnosticPosition;
+import com.sun.tools.javac.resources.CompilerProperties.Helps;
 
 import java.nio.CharBuffer;
 import java.util.Set;
@@ -207,24 +208,24 @@ public class JavaTokenizer extends UnicodeReader {
         errPos = pos;
     }
 
-    protected void lexErrorUnclosedString(int startPos, int endPos) {
+    protected void lexErrorUnclosedString(int pos) {
 
 
         log.error(
                 DiagnosticFlag.SYNTAX,
-                startPos,
+                pos,
                 Errors.UnclosedStrLit,
                 new Help(
-                        Helps.CloseChar,
+                        Helps.CloseString,
                         List.of(new SuggestedChange(
                                 log.currentSource(),
-                                new RangeDiagnosticPosition(startPos, endPos),
+                                new RangeDiagnosticPosition(pos, pos),
                                 "\"",
                                 Applicability.UNKNOWN
                         ))
                 ));
         tk = TokenKind.ERROR;
-        errPos = startPos;
+        errPos = pos;
     }
 
     /**
@@ -534,7 +535,7 @@ public class JavaTokenizer extends UnicodeReader {
         if (isTextBlock)
             lexError(pos, Errors.UnclosedTextBlock);
         else
-            lexErrorUnclosedString(position(), endPos);
+            lexErrorUnclosedString(endPos);
 
         if (firstEOLN  != NOT_FOUND) {
             // Reset recovery position to point after text block open delimiter sequence.
