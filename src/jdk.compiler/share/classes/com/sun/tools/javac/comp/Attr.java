@@ -1068,8 +1068,20 @@ public class Attr extends JCTree.Visitor {
                                 Errors.InvalidAccessorMethodInRecord(env.enclClass.sym, Fragments.AccessorMethodCantThrowException));
                     }
                     if (!tree.typarams.isEmpty()) {
-                        log.error(tree,
-                                Errors.InvalidAccessorMethodInRecord(env.enclClass.sym, Fragments.AccessorMethodMustNotBeGeneric));
+                        final var info = new Info(Infos.RecordAccessorMustNotBeGeneric);
+                        final var help = new Help(Helps.RemoveTyparams, List.of(new SuggestedChange(
+                                log.currentSource(),
+                                new RangeDiagnosticPosition(tree.tyLtPos, tree.tyGtPos),
+                                "",
+                                Applicability.MACHINE_APPLICABLE
+                        )));
+
+                        log.error(
+                                tree,
+                                Errors.InvalidAccessorMethodInRecordRaw(env.enclClass.sym),
+                                info,
+                                help
+                        );
                     }
                     if (tree.sym.isStatic()) {
                         log.error(tree,
@@ -3772,7 +3784,7 @@ public class Attr extends JCTree.Visitor {
                        && typeApply.tyGtPos != Position.NOPOS)
                     {
                         final var help = new Help(
-                            Helps.RemoveTheTyparams,
+                            Helps.RemoveTyparams,
                             List.of(
                                 new SuggestedChange(
                                 log.currentSource(),

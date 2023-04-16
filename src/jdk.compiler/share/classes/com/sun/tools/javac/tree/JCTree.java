@@ -869,6 +869,9 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public JCExpression restype;
         /** type parameters */
         public List<JCTypeParameter> typarams;
+        public int tyLtPos;
+        public int tyGtPos;
+
         /** receiver parameter */
         public JCVariableDecl recvparam;
         /** value parameters */
@@ -888,6 +891,8 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
                             Name name,
                             JCExpression restype,
                             List<JCTypeParameter> typarams,
+                            int tyLtPos,
+                            int tyGtPos,
                             JCVariableDecl recvparam,
                             List<JCVariableDecl> params,
                             List<JCExpression> thrown,
@@ -899,6 +904,8 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
             this.name = name;
             this.restype = restype;
             this.typarams = typarams;
+            this.tyLtPos = tyLtPos;
+            this.tyGtPos = tyGtPos;
             this.params = params;
             this.recvparam = recvparam;
             // TODO: do something special if the given type is null?
@@ -3420,6 +3427,8 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
                             Name name,
                             JCExpression restype,
                             List<JCTypeParameter> typarams,
+                            int tyLtPos,
+                            int tyGtPos,
                             JCVariableDecl recvparam,
                             List<JCVariableDecl> params,
                             List<JCExpression> thrown,
