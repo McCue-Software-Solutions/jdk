@@ -579,7 +579,11 @@ public class Check {
      */
     CheckContext basicHandler = new CheckContext() {
         public void report(DiagnosticPosition pos, JCDiagnostic details) {
-            log.error(pos, Errors.ProbFoundReq(details));
+            // we move any info from the internal diag to the outer
+            details.getInfo().ifPresentOrElse(
+                    info -> log.error(pos, Errors.ProbFoundReq(details.withInfo(null)), info),
+                    () -> log.error(pos, Errors.ProbFoundReq(details))
+            );
         }
         public boolean compatible(Type found, Type req, Warner warn) {
             return types.isAssignable(found, req, warn);
