@@ -380,6 +380,7 @@ public class LambdaToMethod extends TreeTranslator {
                 lambdaType.getThrownTypes() == null ?
                     List.nil() :
                     make.Types(lambdaType.getThrownTypes()),
+                Position.NOPOS,
                 null,
                 null);
         lambdaDecl.sym = sym;
@@ -727,6 +728,7 @@ public class LambdaToMethod extends TreeTranslator {
                         Position.NOPOS,
                         List.of(make.VarDef(kInfo.deserParamSym, null)),
                         List.nil(),
+                        Position.NOPOS,
                         body,
                         null);
         deser.sym = kInfo.deserMethodSym;

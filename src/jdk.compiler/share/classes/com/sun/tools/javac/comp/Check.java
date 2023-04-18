@@ -2713,7 +2713,8 @@ public class Check {
          }
      }
 
-    void checkDefaultMethodClashes(DiagnosticPosition pos, Type site) {
+    void checkDefaultMethodClashes(JCClassDecl pos, ClassSymbol classSym) {
+        final var site = classSym.type;
         DefaultMethodClashFilter dcf = new DefaultMethodClashFilter(site);
         for (Symbol m : types.membersClosure(site, false).getSymbols(dcf)) {
             Assert.check(m.kind == MTH);
@@ -2731,22 +2732,81 @@ public class Check {
                         //strong semantics - issue an error if two sibling interfaces
                         //have two override-equivalent defaults - or if one is abstract
                         //and the other is default
-                        Fragment diagKey;
                         Symbol s1 = defaults.first();
                         Symbol s2;
+                        Info info;
                         if (defaults.size() > 1) {
                             s2 = defaults.toList().tail.head;
-                            diagKey = Fragments.IncompatibleUnrelatedDefaults(Kinds.kindName(site.tsym), site,
-                                    m.name, types.memberType(site, m).getParameterTypes(),
-                                    s1.location(), s2.location());
 
+                            final var posList = new ListBuffer<InfoPosition>();
+
+                            final var firstClassSym = s1.enclClass();
+                            if(firstClassSym.sourcefile != null) {
+                                final var origSource = log.useSource(firstClassSym.sourcefile);
+                                final var s1Tree = (JCMethodDecl) TreeInfo.declarationFor(s1, enter.getEnv(firstClassSym).tree);
+                                posList.append(new InfoPosition(log.currentSource(), new RangeDiagnosticPosition(
+                                        s1Tree.getStartPosition(),
+                                        s1Tree.declaratorEndPos == Position.NOPOS ? s1Tree.getStartPosition() : s1Tree.declaratorEndPos
+                                )));
+                                log.useSource(origSource);
+                            }
+
+                            final var secondClassSym = s2.enclClass();
+                            if(secondClassSym.sourcefile != null) {
+                                final var origSource = log.useSource(secondClassSym.sourcefile);
+                                final var s2Tree = (JCMethodDecl) TreeInfo.declarationFor(s2, enter.getEnv(secondClassSym).tree);
+                                posList.append(new InfoPosition(log.currentSource(), new RangeDiagnosticPosition(
+                                        s2Tree.getStartPosition(),
+                                        s2Tree.declaratorEndPos == Position.NOPOS ? s2Tree.getStartPosition() : s2Tree.declaratorEndPos
+                                )));
+                                log.useSource(origSource);
+                            }
+
+                            info = new Info(Infos.IncompatibleDefaults(
+                                    kindName(classSym),
+                                    site,
+                                    m.name,
+                                    types.memberType(site, m).getParameterTypes(),
+                                    s1.location(),
+                                    s2.location()
+                            ), posList.toList());
                         } else {
                             s2 = abstracts.first();
-                            diagKey = Fragments.IncompatibleAbstractDefault(Kinds.kindName(site.tsym), site,
-                                    m.name, types.memberType(site, m).getParameterTypes(),
-                                    s1.location(), s2.location());
+
+                            final var posList = new ListBuffer<InfoPosition>();
+
+                            final var firstClassSym = s1.enclClass();
+                            if(firstClassSym.sourcefile != null) {
+                                final var origSource = log.useSource(firstClassSym.sourcefile);
+                                final var s1Tree = (JCMethodDecl) TreeInfo.declarationFor(s1, enter.getEnv(firstClassSym).tree);
+                                posList.append(new InfoPosition(log.currentSource(), new RangeDiagnosticPosition(
+                                        s1Tree.getStartPosition(),
+                                        s1Tree.declaratorEndPos == Position.NOPOS ? s1Tree.getStartPosition() : s1Tree.declaratorEndPos
+                                )));
+                                log.useSource(origSource);
+                            }
+
+                            final var secondClassSym = s2.enclClass();
+                            if(secondClassSym.sourcefile != null) {
+                                final var origSource = log.useSource(secondClassSym.sourcefile);
+                                final var s2Tree = (JCMethodDecl) TreeInfo.declarationFor(s2, enter.getEnv(secondClassSym).tree);
+                                posList.append(new InfoPosition(log.currentSource(), new RangeDiagnosticPosition(
+                                        s2Tree.getStartPosition(),
+                                        s2Tree.declaratorEndPos == Position.NOPOS ? s2Tree.getStartPosition() : s2Tree.declaratorEndPos
+                                )));
+                                log.useSource(origSource);
+                            }
+
+                            info = new Info(Infos.IncompatibleAbstractDefault(
+                                    kindName(site.tsym),
+                                    site,
+                                    m.name,
+                                    types.memberType(site, m).getParameterTypes(),
+                                    s1.location(),
+                                    s2.location()
+                            ), posList.toList());
                         }
-                        log.error(pos, Errors.TypesIncompatible(s1.location().type, s2.location().type, diagKey));
+                        log.error(pos, Errors.TypesIncompatibleRaw(s1.location().type, s2.location().type), info);
                         break;
                     }
                 }
