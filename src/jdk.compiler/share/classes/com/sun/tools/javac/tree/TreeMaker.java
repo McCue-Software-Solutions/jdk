@@ -192,11 +192,12 @@ public class TreeMaker implements JCTree.Factory {
                                int tyGtPos,
                                List<JCVariableDecl> params,
                                List<JCExpression> thrown,
+                               int declaratorEndPos,
                                JCBlock body,
                                JCExpression defaultValue) {
         return MethodDef(
                 mods, name, restype, typarams, tyLtPos, tyGtPos, null, params,
-                thrown, body, defaultValue);
+                thrown, declaratorEndPos, body, defaultValue);
     }
 
     public JCMethodDecl MethodDef(JCModifiers mods,
@@ -208,6 +209,7 @@ public class TreeMaker implements JCTree.Factory {
                                JCVariableDecl recvparam,
                                List<JCVariableDecl> params,
                                List<JCExpression> thrown,
+                               int declaratorEndPos,
                                JCBlock body,
                                JCExpression defaultValue)
     {
@@ -220,6 +222,7 @@ public class TreeMaker implements JCTree.Factory {
                                        recvparam,
                                        params,
                                        thrown,
+                                       declaratorEndPos,
                                        body,
                                        defaultValue,
                                        null);
@@ -1045,6 +1048,7 @@ public class TreeMaker implements JCTree.Factory {
                 null, // receiver type
                 Params(mtype.getParameterTypes(), m),
                 Types(mtype.getThrownTypes()),
+                Position.NOPOS,
                 body,
                 null,
                 m).setPos(pos).setType(mtype);

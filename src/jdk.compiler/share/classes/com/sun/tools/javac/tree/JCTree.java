@@ -878,6 +878,8 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public List<JCVariableDecl> params;
         /** exceptions thrown by this method */
         public List<JCExpression> thrown;
+        /** the end position of the declarator of the method */
+        public int declaratorEndPos;
         /** statements in the method */
         public JCBlock body;
         /** default value, for annotation types */
@@ -896,6 +898,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
                             JCVariableDecl recvparam,
                             List<JCVariableDecl> params,
                             List<JCExpression> thrown,
+                            int declaratorEndPos,
                             JCBlock body,
                             JCExpression defaultValue,
                             MethodSymbol sym)
@@ -911,6 +914,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
             // TODO: do something special if the given type is null?
             // receiver != null ? receiver : List.<JCTypeAnnotation>nil());
             this.thrown = thrown;
+            this.declaratorEndPos = declaratorEndPos;
             this.body = body;
             this.defaultValue = defaultValue;
             this.sym = sym;
@@ -3432,6 +3436,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
                             JCVariableDecl recvparam,
                             List<JCVariableDecl> params,
                             List<JCExpression> thrown,
+                            int declEndPos,
                             JCBlock body,
                             JCExpression defaultValue);
         JCVariableDecl VarDef(JCModifiers mods,

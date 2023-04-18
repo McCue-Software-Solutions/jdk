@@ -259,6 +259,7 @@ class ReplParser extends JavacParser {
                                     tyParamsData.GtPos(),
                                     List.nil(),
                                     List.nil(),
+                                    Position.NOPOS,
                                     null,
                                     null
                             )))
