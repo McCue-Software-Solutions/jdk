@@ -58,10 +58,12 @@ class TopLevelWindowMulticaster
         ((TopLevelWindowListener)b).topLevelWindowDestroyed(w);
     }
 
+    @SuppressWarnings("overloads")
     public static TopLevelWindowListener add(TopLevelWindowListener a, TopLevelWindowListener b) {
         return (TopLevelWindowListener)addInternal(a, b);
     }
 
+    @SuppressWarnings("overloads")
     public static TopLevelWindowListener remove(TopLevelWindowListener l, TopLevelWindowListener oldl) {
         return (TopLevelWindowListener)removeInternal(l, oldl);
     }

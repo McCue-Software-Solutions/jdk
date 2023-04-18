@@ -547,6 +547,7 @@ public class AWTEventMulticaster implements
      * @param b component-listener-b
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static ComponentListener add(ComponentListener a, ComponentListener b) {
         return (ComponentListener)addInternal(a, b);
     }
@@ -558,6 +559,7 @@ public class AWTEventMulticaster implements
      * @param b container-listener-b
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static ContainerListener add(ContainerListener a, ContainerListener b) {
         return (ContainerListener)addInternal(a, b);
     }
@@ -569,6 +571,7 @@ public class AWTEventMulticaster implements
      * @param b focus-listener-b
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static FocusListener add(FocusListener a, FocusListener b) {
         return (FocusListener)addInternal(a, b);
     }
@@ -580,6 +583,7 @@ public class AWTEventMulticaster implements
      * @param b key-listener-b
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static KeyListener add(KeyListener a, KeyListener b) {
         return (KeyListener)addInternal(a, b);
     }
@@ -591,6 +595,7 @@ public class AWTEventMulticaster implements
      * @param b mouse-listener-b
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static MouseListener add(MouseListener a, MouseListener b) {
         return (MouseListener)addInternal(a, b);
     }
@@ -602,6 +607,7 @@ public class AWTEventMulticaster implements
      * @param b mouse-motion-listener-b
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static MouseMotionListener add(MouseMotionListener a, MouseMotionListener b) {
         return (MouseMotionListener)addInternal(a, b);
     }
@@ -613,6 +619,7 @@ public class AWTEventMulticaster implements
      * @param b window-listener-b
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static WindowListener add(WindowListener a, WindowListener b) {
         return (WindowListener)addInternal(a, b);
     }
@@ -639,6 +646,7 @@ public class AWTEventMulticaster implements
      * @return the resulting listener
      * @since 1.4
      */
+    @SuppressWarnings("overloads")
     public static WindowFocusListener add(WindowFocusListener a,
                                           WindowFocusListener b) {
         return (WindowFocusListener)addInternal(a, b);
@@ -700,6 +708,7 @@ public class AWTEventMulticaster implements
      * @param b input-method-listener-b
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
      public static InputMethodListener add(InputMethodListener a, InputMethodListener b) {
         return (InputMethodListener)addInternal(a, b);
      }
@@ -725,6 +734,7 @@ public class AWTEventMulticaster implements
      * @return the resulting listener
      * @since 1.3
      */
+    @SuppressWarnings("overloads")
      public static HierarchyBoundsListener add(HierarchyBoundsListener a, HierarchyBoundsListener b) {
         return (HierarchyBoundsListener)addInternal(a, b);
      }
@@ -750,6 +760,7 @@ public class AWTEventMulticaster implements
      * @param oldl the component-listener being removed
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static ComponentListener remove(ComponentListener l, ComponentListener oldl) {
         return (ComponentListener) removeInternal(l, oldl);
     }
@@ -761,6 +772,7 @@ public class AWTEventMulticaster implements
      * @param oldl the container-listener being removed
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static ContainerListener remove(ContainerListener l, ContainerListener oldl) {
         return (ContainerListener) removeInternal(l, oldl);
     }
@@ -772,6 +784,7 @@ public class AWTEventMulticaster implements
      * @param oldl the focus-listener being removed
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static FocusListener remove(FocusListener l, FocusListener oldl) {
         return (FocusListener) removeInternal(l, oldl);
     }
@@ -783,6 +796,7 @@ public class AWTEventMulticaster implements
      * @param oldl the key-listener being removed
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static KeyListener remove(KeyListener l, KeyListener oldl) {
         return (KeyListener) removeInternal(l, oldl);
     }
@@ -794,6 +808,7 @@ public class AWTEventMulticaster implements
      * @param oldl the mouse-listener being removed
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static MouseListener remove(MouseListener l, MouseListener oldl) {
         return (MouseListener) removeInternal(l, oldl);
     }
@@ -805,6 +820,7 @@ public class AWTEventMulticaster implements
      * @param oldl the mouse-motion-listener being removed
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static MouseMotionListener remove(MouseMotionListener l, MouseMotionListener oldl) {
         return (MouseMotionListener) removeInternal(l, oldl);
     }
@@ -816,6 +832,7 @@ public class AWTEventMulticaster implements
      * @param oldl the window-listener being removed
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static WindowListener remove(WindowListener l, WindowListener oldl) {
         return (WindowListener) removeInternal(l, oldl);
     }
@@ -842,6 +859,7 @@ public class AWTEventMulticaster implements
      * @return the resulting listener
      * @since 1.4
      */
+    @SuppressWarnings("overloads")
     public static WindowFocusListener remove(WindowFocusListener l,
                                              WindowFocusListener oldl) {
         return (WindowFocusListener) removeInternal(l, oldl);
@@ -903,6 +921,7 @@ public class AWTEventMulticaster implements
      * @param oldl the input-method-listener being removed
      * @return the resulting listener
      */
+    @SuppressWarnings("overloads")
     public static InputMethodListener remove(InputMethodListener l, InputMethodListener oldl) {
         return (InputMethodListener) removeInternal(l, oldl);
     }
