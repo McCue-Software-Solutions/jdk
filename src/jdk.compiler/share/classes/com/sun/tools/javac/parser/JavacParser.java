@@ -736,9 +736,14 @@ public class JavacParser implements Parser {
                 n = Float.NaN;
             }
             if (n.floatValue() == 0.0f && !isZero(proper))
-                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.FpNumberTooSmall);
+                log.error(
+                        DiagnosticFlag.SYNTAX,
+                        token.pos,
+                        Errors.FpNumberTooSmall,
+                        new Info(Infos.DoubleNumberTooSmall)
+                );
             else if (n.floatValue() == Float.POSITIVE_INFINITY)
-                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.FpNumberTooLarge);
+                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.FpNumberTooLarge, new Info(Infos.FpNumberTooLarge) );
             else
                 t = F.at(pos).Literal(TypeTag.FLOAT, n);
             break;
@@ -755,9 +760,14 @@ public class JavacParser implements Parser {
                 n = Double.NaN;
             }
             if (n.doubleValue() == 0.0d && !isZero(proper))
-                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.FpNumberTooSmall);
+                log.error(
+                        DiagnosticFlag.SYNTAX,
+                        token.pos,
+                        Errors.FpNumberTooSmall,
+                        new Info(Infos.FpNumberTooSmall)
+                );
             else if (n.doubleValue() == Double.POSITIVE_INFINITY)
-                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.FpNumberTooLarge);
+                log.error(DiagnosticFlag.SYNTAX, token.pos, Errors.FpNumberTooLarge, new Info(Infos.DoubleNumberTooLarge));
             else
                 t = F.at(pos).Literal(TypeTag.DOUBLE, n);
             break;
