@@ -2075,14 +2075,18 @@ public class Flow {
                                       Errors.FinalParameterMayNotBeAssigned(sym));
                         }
                     } else if (!uninits.isMember(sym.adr)) {
-                        log.error(pos, diags.errorKey(flowKind.errKey, sym));
+                        if(flowKind.errKey == "var.might.already.be.assigned"){
+                            log.error(pos, diags.errorKey(flowKind.errKey, sym), new Info(Infos.VarMightAlreadyBeAssigned(sym.pos)));
+                        } else {
+                            log.error(pos, diags.errorKey(flowKind.errKey, sym), new Info(Infos.VarMightBeAssignedInLoop(sym.pos)));
+                        }
                     } else {
                         uninit(sym);
                     }
                 }
                 inits.incl(sym.adr);
             } else if ((sym.flags() & FINAL) != 0) {
-                log.error(pos, Errors.VarMightAlreadyBeAssigned(sym));
+                log.error(pos, Errors.VarMightAlreadyBeAssigned(sym), new Info(Infos.VarMightAlreadyBeAssigned(sym.pos)));
             }
         }
         //where
