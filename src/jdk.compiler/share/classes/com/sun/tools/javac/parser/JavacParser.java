@@ -1227,7 +1227,7 @@ public class JavacParser implements Parser {
     protected JCExpression term3() {
         int pos = token.pos;
         JCExpression t;
-        List<JCExpression> typeArgs = typeArgumentsOpt(EXPR);
+        TyArguments typeArgs = typeArgumentsOpt(EXPR);
         switch (token.kind) {
         case QUES:
             if ((mode & TYPE) != 0 && (mode & (TYPEARG|NOPARAMS)) == TYPEARG) {
@@ -1295,7 +1295,7 @@ public class JavacParser implements Parser {
                 if (typeArgs == null)
                     t = argumentsOpt(null, t);
                 else
-                    t = arguments(typeArgs, t);
+                    t = arguments(typeArgs.TyArgs(), t);
                 typeArgs = null;
             } else return illegal();
             break;
@@ -1303,7 +1303,7 @@ public class JavacParser implements Parser {
             if ((mode & EXPR) != 0) {
                 selectExprMode();
                 t = to(F.at(pos).Ident(names._super));
-                t = superSuffix(typeArgs, t);
+                t = superSuffix(typeArgs != null ? typeArgs.TyArgs() : null, t);
                 typeArgs = null;
             } else return illegal();
             break;
@@ -1321,7 +1321,7 @@ public class JavacParser implements Parser {
                 selectExprMode();
                 nextToken();
                 if (token.kind == LT) typeArgs = typeArguments(false);
-                t = creator(pos, typeArgs);
+                t = creator(pos, typeArgs != null ? typeArgs.TyArgs() : null);
                 typeArgs = null;
             } else return illegal();
             break;
@@ -1402,7 +1402,7 @@ public class JavacParser implements Parser {
                     case LPAREN:
                         if ((mode & EXPR) != 0) {
                             selectExprMode();
-                            t = arguments(typeArgs, t);
+                            t = arguments(typeArgs != null ? typeArgs.TyArgs() : null, t);
                             if (!annos.isEmpty()) t = illegal(annos.head.pos);
                             typeArgs = null;
                         }
@@ -1433,7 +1433,7 @@ public class JavacParser implements Parser {
                             case SUPER:
                                 selectExprMode();
                                 t = to(F.at(pos).Select(t, names._super));
-                                t = superSuffix(typeArgs, t);
+                                t = superSuffix(typeArgs != null ? typeArgs.TyArgs() : null, t);
                                 typeArgs = null;
                                 break loop;
                             case NEW:
@@ -1442,7 +1442,7 @@ public class JavacParser implements Parser {
                                 int pos1 = token.pos;
                                 nextToken();
                                 if (token.kind == LT) typeArgs = typeArguments(false);
-                                t = innerCreator(pos1, typeArgs, t);
+                                t = innerCreator(pos1, typeArgs != null ? typeArgs.TyArgs() : null, t);
                                 typeArgs = null;
                                 break loop;
                             }
@@ -1501,7 +1501,7 @@ public class JavacParser implements Parser {
                                 t = illegal();
                             }
                             selectExprMode();
-                            return term3Rest(t, typeArgs);
+                            return term3Rest(t, typeArgs != null ? typeArgs.TyArgs() : null);
                         }
                         break loop;
                     default:
@@ -1566,7 +1566,7 @@ public class JavacParser implements Parser {
         default:
             return illegal();
         }
-        return term3Rest(t, typeArgs);
+        return term3Rest(t, typeArgs != null ? typeArgs.TyArgs() : null);
     }
 
     private List<JCCase> switchExpressionStatementGroup() {
@@ -1652,7 +1652,8 @@ public class JavacParser implements Parser {
                 accept(RBRACKET);
             } else if (token.kind == DOT) {
                 nextToken();
-                typeArgs = typeArgumentsOpt(EXPR);
+                final var args = typeArgumentsOpt(EXPR);
+                typeArgs = args != null ? args.TyArgs() : null;
                 if (token.kind == SUPER && (mode & EXPR) != 0) {
                     selectExprMode();
                     t = to(F.at(pos1).Select(t, names._super));
@@ -1664,7 +1665,7 @@ public class JavacParser implements Parser {
                     selectExprMode();
                     int pos2 = token.pos;
                     nextToken();
-                    if (token.kind == LT) typeArgs = typeArguments(false);
+                    if (token.kind == LT) typeArgs = typeArguments(false).TyArgs();
                     t = innerCreator(pos2, typeArgs, t);
                     typeArgs = null;
                 } else {
@@ -2076,7 +2077,7 @@ public class JavacParser implements Parser {
         } else {
             int pos = token.pos;
             accept(DOT);
-            typeArgs = (token.kind == LT) ? typeArguments(false) : null;
+            typeArgs = (token.kind == LT) ? typeArguments(false).TyArgs() : null;
             t = toP(F.at(pos).Select(t, ident()));
             t = argumentsOpt(typeArgs, t);
         }
@@ -2157,11 +2158,11 @@ public class JavacParser implements Parser {
             return t;
         }
     }
-    List<JCExpression> typeArgumentsOpt() {
+    TyArguments typeArgumentsOpt() {
         return typeArgumentsOpt(TYPE);
     }
 
-    List<JCExpression> typeArgumentsOpt(int useMode) {
+    TyArguments typeArgumentsOpt(int useMode) {
         if (token.kind == LT) {
             if ((mode & useMode) == 0 ||
                 (mode & NOPARAMS) != 0) {
@@ -2173,18 +2174,21 @@ public class JavacParser implements Parser {
         return null;
     }
 
+    record TyArguments(int LtPos, int GtPos, List<JCExpression> TyArgs){};
     /**
      *  {@literal
      *  TypeArguments  = "<" TypeArgument {"," TypeArgument} ">"
      *  }
      */
-    List<JCExpression> typeArguments(boolean diamondAllowed) {
+    TyArguments typeArguments(boolean diamondAllowed) {
         if (token.kind == LT) {
+            final var ltPos = token.pos;
             nextToken();
             if (token.kind == GT && diamondAllowed) {
+                final var gtPos = token.endPos;
                 mode |= DIAMOND;
                 nextToken();
-                return List.nil();
+                return new TyArguments(ltPos, gtPos, List.nil());
             } else {
                 ListBuffer<JCExpression> args = new ListBuffer<>();
                 args.append(((mode & EXPR) == 0) ? typeArgument() : parseType());
@@ -2192,23 +2196,28 @@ public class JavacParser implements Parser {
                     nextToken();
                     args.append(((mode & EXPR) == 0) ? typeArgument() : parseType());
                 }
+
+                int gtPos;
                 switch (token.kind) {
 
                 case GTGTGTEQ: case GTGTEQ: case GTEQ:
                 case GTGTGT: case GTGT:
                     token = S.split();
+                    gtPos = token.endPos;
                     break;
                 case GT:
+                    gtPos = token.endPos;
                     nextToken();
                     break;
                 default:
+                    gtPos = Position.NOPOS;
                     args.append(syntaxError(token.pos, Errors.Expected2(GT, COMMA)));
                     break;
                 }
-                return args.toList();
+                return new TyArguments(ltPos, gtPos, args.toList());
             }
         } else {
-            return List.of(syntaxError(token.pos, Errors.Expected(LT)));
+            return new TyArguments(Position.NOPOS, Position.NOPOS, List.of(syntaxError(token.pos, Errors.Expected(LT))));
         }
     }
 
@@ -2256,8 +2265,8 @@ public class JavacParser implements Parser {
 
     JCTypeApply typeArguments(JCExpression t, boolean diamondAllowed) {
         int pos = token.pos;
-        List<JCExpression> args = typeArguments(diamondAllowed);
-        return toP(F.at(pos).TypeApply(t, args, Position.NOPOS, Position.NOPOS));
+        final var args = typeArguments(diamondAllowed);
+        return toP(F.at(pos).TypeApply(t, args.TyArgs(), args.LtPos(), args.GtPos()));
     }
 
     /**
@@ -2359,7 +2368,7 @@ public class JavacParser implements Parser {
         selectExprMode();
         List<JCExpression> typeArgs = null;
         if (token.kind == LT) {
-            typeArgs = typeArguments(false);
+            typeArgs = typeArguments(false).TyArgs();
         }
         Name refName;
         ReferenceMode refMode;
@@ -4375,7 +4384,8 @@ public class JavacParser implements Parser {
         int pos = token.pos;
         List<JCAnnotation> annotations = annotationsOpt(Tag.ANNOTATION);
         JCModifiers mods = F.at(annotations.isEmpty() ? Position.NOPOS : pos).Modifiers(flags, annotations);
-        List<JCExpression> typeArgs = typeArgumentsOpt();
+        final var tArgsOpt = typeArgumentsOpt();
+        List<JCExpression> typeArgs = tArgsOpt != null ? tArgsOpt.TyArgs() : null;
         int identPos = token.pos;
         Name name = ident();
         int createPos = token.pos;
