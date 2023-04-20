@@ -116,6 +116,8 @@ public class ClassGenerator {
         WARN("warn", "Warning", "Warnings"),
         NOTE("note", "Note", "Notes"),
         MISC("misc", "Fragment", "Fragments"),
+        INFO("info", "InfoFragment", "Infos"),
+        HELP("help", "HelpFragment", "Helps"),
         OTHER(null, null, null);
 
         /** The prefix for this factory kind (i.e. 'err'). */

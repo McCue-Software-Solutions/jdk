@@ -546,9 +546,13 @@ public class TypeEnter implements Completer {
          *  @param c                The class symbol of the enum
          */
         protected  JCExpression enumBase(int pos, ClassSymbol c) {
-            JCExpression result = make.at(pos).
-                TypeApply(make.QualIdent(syms.enumSym),
-                          List.of(make.Type(c.type)));
+            JCExpression result = make.at(pos)
+                                      .TypeApply(
+                                              make.QualIdent(syms.enumSym),
+                                              List.of(make.Type(c.type)),
+                                              Position.NOPOS,
+                                              Position.NOPOS
+                                      );
             return result;
         }
 
@@ -1135,6 +1139,8 @@ public class TypeEnter implements Completer {
                            */
                           tc.copy(recordField.vartype),
                           List.nil(),
+                          Position.NOPOS,
+                          Position.NOPOS,
                           List.nil(),
                           List.nil(), // thrown
                           null,
@@ -1158,6 +1164,8 @@ public class TypeEnter implements Completer {
                           names.values,
                           valuesType,
                           List.nil(),
+                          Position.NOPOS,
+                          Position.NOPOS,
                           List.nil(),
                           List.nil(),
                           null,
@@ -1169,6 +1177,8 @@ public class TypeEnter implements Completer {
                           names.valueOf,
                           make.Type(tree.sym.type),
                           List.nil(),
+                          Position.NOPOS,
+                          Position.NOPOS,
                           List.of(make.VarDef(make.Modifiers(Flags.PARAMETER |
                                                              Flags.MANDATED),
                                                 names.fromString("name"),
@@ -1205,6 +1215,8 @@ public class TypeEnter implements Completer {
                               names.toString,
                               make.Type(syms.stringType),
                               List.nil(),
+                              Position.NOPOS,
+                              Position.NOPOS,
                               List.nil(),
                               List.nil(),
                               null,
@@ -1218,6 +1230,8 @@ public class TypeEnter implements Completer {
                               names.hashCode,
                               make.Type(syms.intType),
                               List.nil(),
+                              Position.NOPOS,
+                              Position.NOPOS,
                               List.nil(),
                               List.nil(),
                               null,
@@ -1231,6 +1245,8 @@ public class TypeEnter implements Completer {
                               names.equals,
                               make.Type(syms.booleanType),
                               List.nil(),
+                              Position.NOPOS,
+                              Position.NOPOS,
                               List.of(make.VarDef(make.Modifiers(Flags.PARAMETER),
                                                 names.fromString("o"),
                                                 make.Type(syms.objectType), null)),

@@ -944,7 +944,7 @@ public class DeferredAttr extends JCTree.Visitor {
                         case STATICERR:
                             //if no method found, or method found with wrong staticness, report better message
                             checkContext.report(tree, ((ResolveError)lookupSym).getDiagnostic(DiagnosticType.FRAGMENT,
-                                    tree, exprTree.type.tsym, exprTree.type, tree.name, argtypes.toList(), List.nil()));
+                                    tree, localEnv, exprTree.type, tree.name, argtypes.toList(), List.nil()));
                             break;
                     }
                 }

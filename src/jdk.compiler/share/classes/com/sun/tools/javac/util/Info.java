@@ -1,11 +1,12 @@
 package com.sun.tools.javac.util;
 
-import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
-import com.sun.tools.javac.util.JCDiagnostic.Fragment;
+import com.sun.tools.javac.util.JCDiagnostic.InfoFragment;
 
 public record Info(
-        Fragment message,
-        DiagnosticSource sourceFile,
-        List<DiagnosticPosition> positions
+        InfoFragment message,
+        List<InfoPosition> positions
 ) {
+    public Info(InfoFragment message) {
+        this(message, List.nil());
+    }
 }

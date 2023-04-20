@@ -374,6 +374,8 @@ public class LambdaToMethod extends TreeTranslator {
                 sym.name,
                 make.QualIdent(lambdaType.getReturnType().tsym),
                 List.nil(),
+                Position.NOPOS,
+                Position.NOPOS,
                 localContext.syntheticParams,
                 lambdaType.getThrownTypes() == null ?
                     List.nil() :
@@ -518,6 +520,9 @@ public class LambdaToMethod extends TreeTranslator {
                 throw new InternalError("Should not have an invalid kind");
         }
 
+        if (init != null) {
+            refSym = (MethodSymbol) types.binaryQualifier(refSym, init.type);
+        }
         List<JCExpression> indy_args = init==null? List.nil() : translate(List.of(init), localContext.prev);
 
 
@@ -718,6 +723,8 @@ public class LambdaToMethod extends TreeTranslator {
                         names.deserializeLambda,
                         make.QualIdent(kInfo.deserMethodSym.getReturnType().tsym),
                         List.nil(),
+                        Position.NOPOS,
+                        Position.NOPOS,
                         List.of(make.VarDef(kInfo.deserParamSym, null)),
                         List.nil(),
                         body,

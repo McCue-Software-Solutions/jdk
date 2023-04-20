@@ -41,9 +41,12 @@ import com.sun.tools.javac.code.Directive.ExportsDirective;
 import com.sun.tools.javac.code.Directive.RequiresDirective;
 import com.sun.tools.javac.code.Source.Feature;
 import com.sun.tools.javac.comp.Annotate.AnnotationTypeMetadata;
+import com.sun.tools.javac.comp.Check.CycleChecker.SymbolPos;
 import com.sun.tools.javac.jvm.*;
+import com.sun.tools.javac.resources.CompilerProperties;
 import com.sun.tools.javac.resources.CompilerProperties.Errors;
 import com.sun.tools.javac.resources.CompilerProperties.Fragments;
+import com.sun.tools.javac.resources.CompilerProperties.Infos;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.util.*;
@@ -51,6 +54,7 @@ import com.sun.tools.javac.util.JCDiagnostic.DiagnosticFlag;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.Error;
 import com.sun.tools.javac.util.JCDiagnostic.Fragment;
+import com.sun.tools.javac.util.JCDiagnostic.RangeDiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.Warning;
 import com.sun.tools.javac.util.List;
 
@@ -575,7 +579,11 @@ public class Check {
      */
     CheckContext basicHandler = new CheckContext() {
         public void report(DiagnosticPosition pos, JCDiagnostic details) {
-            log.error(pos, Errors.ProbFoundReq(details));
+            // we move any info from the internal diag to the outer
+            details.getInfo().ifPresentOrElse(
+                    info -> log.error(pos, Errors.ProbFoundReq(details.withInfo(null)), info),
+                    () -> log.error(pos, Errors.ProbFoundReq(details))
+            );
         }
         public boolean compatible(Type found, Type req, Warner warn) {
             return types.isAssignable(found, req, warn);
@@ -2302,7 +2310,27 @@ public class Check {
 
     class CycleChecker extends TreeScanner {
 
-        Set<Symbol> seenClasses = new HashSet<>();
+        // a combination of a symbol and its diagnostics position, hashed by the symbol
+        record SymbolPos(Symbol Sym, DiagnosticPosition Pos) {
+            @Override
+            public boolean equals(final Object o) {
+                if (this == o) {
+                    return true;
+                }
+                if (o == null || getClass() != o.getClass()) {
+                    return false;
+                }
+                final SymbolPos symbolPos = (SymbolPos) o;
+                return Objects.equals(Sym, symbolPos.Sym);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(Sym);
+            }
+        }
+
+        LinkedHashSet<SymbolPos> seenClasses = new LinkedHashSet<>();
         boolean errorFound = false;
         boolean partialCheck = false;
 
@@ -2365,12 +2393,14 @@ public class Check {
         void checkClass(DiagnosticPosition pos, Symbol c, List<JCTree> supertypes) {
             if ((c.flags_field & ACYCLIC) != 0)
                 return;
-            if (seenClasses.contains(c)) {
+
+            final var symPos = new SymbolPos(c, pos);
+            if (seenClasses.contains(symPos)) {
                 errorFound = true;
-                noteCyclic(pos, (ClassSymbol)c);
+                noteCyclic(pos, (ClassSymbol)c, seenClasses);
             } else if (!c.type.isErroneous()) {
                 try {
-                    seenClasses.add(c);
+                    seenClasses.add(symPos);
                     if (c.type.hasTag(CLASS)) {
                         if (supertypes.nonEmpty()) {
                             scan(supertypes);
@@ -2393,7 +2423,7 @@ public class Check {
                         }
                     }
                 } finally {
-                    seenClasses.remove(c);
+                    seenClasses.remove(symPos);
                 }
             }
         }
@@ -2444,7 +2474,7 @@ public class Check {
         if ((c.flags_field & ACYCLIC) != 0) return true;
 
         if ((c.flags_field & LOCKED) != 0) {
-            noteCyclic(pos, (ClassSymbol)c);
+            noteCyclic(pos, (ClassSymbol)c, null);
         } else if (!c.type.isErroneous()) {
             try {
                 c.flags_field |= LOCKED;
@@ -2471,9 +2501,31 @@ public class Check {
         return complete;
     }
 
-    /** Note that we found an inheritance cycle. */
-    private void noteCyclic(DiagnosticPosition pos, ClassSymbol c) {
-        log.error(pos, Errors.CyclicInheritance(c));
+    /** Note that we found an inheritance cycle.  seenClassOrder, if present, adds additional context to the error
+     * detailing the classes seen to form the dependency cycle.
+     * */
+    private void noteCyclic(DiagnosticPosition pos, ClassSymbol c, final LinkedHashSet<SymbolPos> seenClassOrder) {
+        if (seenClassOrder != null && seenClassOrder.size() > 0) {
+            final var sb = new StringBuilder();
+            final var positions = new ArrayList<InfoPosition>();
+            for (final var seen : seenClassOrder) {
+                var classPos = seen.Pos();
+                // cut the positions at the end of the extends lists
+                if(classPos instanceof JCClassDecl classDecl) {
+                    final var endPos = classDecl.extending.getEndPosition(log.currentSource().getEndPosTable());
+                    classPos = new RangeDiagnosticPosition(classDecl.getStartPosition(), endPos);
+                }
+
+                positions.add(new InfoPosition(log.currentSource(), classPos));
+                sb.append(seen.Sym());
+                sb.append("->");
+            }
+            sb.append(seenClassOrder.iterator().next().Sym());
+
+            log.error(pos, Errors.CyclicInheritance(c), new Info(Infos.CyclicChain(sb.toString()), List.from(positions)));
+        } else {
+            log.error(pos, Errors.CyclicInheritance(c));
+        }
         for (List<Type> l=types.interfaces(c.type); l.nonEmpty(); l=l.tail)
             l.head = types.createErrorType((ClassSymbol)l.head.tsym, Type.noType);
         Type st = types.supertype(c.type);
@@ -4346,73 +4398,106 @@ public class Check {
      * @param cases the cases that should be checked.
      */
     void checkSwitchCaseStructure(List<JCCase> cases) {
-        boolean wasConstant = false;          // Seen a constant in the same case label
-        boolean wasDefault = false;           // Seen a default in the same case label
-        boolean wasNullPattern = false;       // Seen a null pattern in the same case label,
-                                              //or fall through from a null pattern
-        boolean wasPattern = false;           // Seen a pattern in the same case label
-                                              //or fall through from a pattern
-        boolean wasTypePattern = false;       // Seen a pattern in the same case label
-                                              //or fall through from a type pattern
-        boolean wasNonEmptyFallThrough = false;
         for (List<JCCase> l = cases; l.nonEmpty(); l = l.tail) {
             JCCase c = l.head;
-            for (JCCaseLabel label : c.labels) {
-                if (label.hasTag(CONSTANTCASELABEL)) {
-                    JCExpression expr = ((JCConstantCaseLabel) label).expr;
-                    if (TreeInfo.isNull(expr)) {
-                        if (wasPattern && !wasTypePattern && !wasNonEmptyFallThrough) {
-                            log.error(label.pos(), Errors.FlowsThroughFromPattern);
+            if (c.labels.head instanceof JCConstantCaseLabel constLabel) {
+                if (TreeInfo.isNull(constLabel.expr)) {
+                    if (c.labels.tail.nonEmpty()) {
+                        if (c.labels.tail.head instanceof JCDefaultCaseLabel defLabel) {
+                            if (c.labels.tail.tail.nonEmpty()) {
+                                log.error(c.labels.tail.tail.head.pos(), Errors.InvalidCaseLabelCombination);
+                            }
+                        } else {
+                            log.error(c.labels.tail.head.pos(), Errors.InvalidCaseLabelCombination);
                         }
-                        wasNullPattern = true;
-                    } else {
-                        if (wasPattern && !wasNonEmptyFallThrough) {
-                            log.error(label.pos(), Errors.FlowsThroughFromPattern);
-                        }
-                        wasConstant = true;
                     }
-                } else if (label.hasTag(DEFAULTCASELABEL)) {
-                    if (wasPattern && !wasNonEmptyFallThrough) {
-                        log.error(label.pos(), Errors.FlowsThroughFromPattern);
-                    }
-                    wasDefault = true;
                 } else {
-                    JCPattern pat = ((JCPatternCaseLabel) label).pat;
-                    while (pat instanceof JCParenthesizedPattern parenthesized) {
-                        pat = parenthesized.pattern;
+                    for (JCCaseLabel label : c.labels.tail) {
+                        if (!(label instanceof JCConstantCaseLabel) || TreeInfo.isNullCaseLabel(label)) {
+                            log.error(label.pos(), Errors.InvalidCaseLabelCombination);
+                            break;
+                        }
                     }
-                    boolean isTypePattern = pat.hasTag(BINDINGPATTERN);
-                    if (wasPattern || wasConstant || wasDefault ||
-                        (wasNullPattern && (!isTypePattern || wasNonEmptyFallThrough))) {
-                        log.error(label.pos(), Errors.FlowsThroughToPattern);
-                    }
-                    wasPattern = true;
-                    wasTypePattern = isTypePattern;
+                }
+            } else {
+                if (c.labels.tail.nonEmpty()) {
+                    log.error(c.labels.tail.head.pos(), Errors.FlowsThroughFromPattern);
                 }
             }
+        }
 
-            boolean completesNormally = c.caseKind == CaseTree.CaseKind.STATEMENT ? c.completesNormally
-                                                                                  : false;
+        boolean isCaseStatementGroup = cases.nonEmpty() &&
+                                       cases.head.caseKind == CaseTree.CaseKind.STATEMENT;
 
-            if (c.stats.nonEmpty()) {
-                wasConstant = false;
-                wasDefault = false;
-                wasNullPattern &= completesNormally;
-                wasPattern &= completesNormally;
-                wasTypePattern &= completesNormally;
+        if (isCaseStatementGroup) {
+            boolean previousCompletessNormally = false;
+            for (List<JCCase> l = cases; l.nonEmpty(); l = l.tail) {
+                JCCase c = l.head;
+                if (previousCompletessNormally &&
+                    c.stats.nonEmpty() &&
+                    c.labels.head instanceof JCPatternCaseLabel patternLabel &&
+                    hasBindings(patternLabel.pat)) {
+                    log.error(c.labels.head.pos(), Errors.FlowsThroughToPattern);
+                } else if (c.stats.isEmpty() &&
+                           c.labels.head instanceof JCPatternCaseLabel patternLabel &&
+                           hasBindings(patternLabel.pat) &&
+                           hasStatements(l.tail)) {
+                    log.error(c.labels.head.pos(), Errors.FlowsThroughFromPattern);
+                }
+                previousCompletessNormally = c.completesNormally;
             }
-
-            wasNonEmptyFallThrough = c.stats.nonEmpty() && completesNormally;
         }
     }
 
+    boolean hasBindings(JCPattern p) {
+        boolean[] bindings = new boolean[1];
+
+        new TreeScanner() {
+            @Override
+            public void visitBindingPattern(JCBindingPattern tree) {
+                bindings[0] = true;
+                super.visitBindingPattern(tree);
+            }
+        }.scan(p);
+
+        return bindings[0];
+    }
+
+    boolean hasStatements(List<JCCase> cases) {
+        for (List<JCCase> l = cases; l.nonEmpty(); l = l.tail) {
+            if (l.head.stats.nonEmpty()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     void checkSwitchCaseLabelDominated(List<JCCase> cases) {
         List<JCCaseLabel> caseLabels = List.nil();
+        boolean seenDefault = false;
+        boolean seenDefaultLabel = false;
+        boolean warnDominatedByDefault = false;
         for (List<JCCase> l = cases; l.nonEmpty(); l = l.tail) {
             JCCase c = l.head;
             for (JCCaseLabel label : c.labels) {
-                if (label.hasTag(DEFAULTCASELABEL) || TreeInfo.isNullCaseLabel(label)) {
+                if (label.hasTag(DEFAULTCASELABEL)) {
+                    seenDefault = true;
+                    seenDefaultLabel |=
+                            TreeInfo.isNullCaseLabel(c.labels.head);
                     continue;
+                }
+                if (TreeInfo.isNullCaseLabel(label)) {
+                    if (seenDefault) {
+                        log.error(label.pos(), Errors.PatternDominated);
+                    }
+                    continue;
+                }
+                if (seenDefault && !warnDominatedByDefault) {
+                    if (label.hasTag(PATTERNCASELABEL) ||
+                        (label instanceof JCConstantCaseLabel && seenDefaultLabel)) {
+                        log.error(label.pos(), Errors.PatternDominated);
+                        warnDominatedByDefault = true;
+                    }
                 }
                 Type currentType = labelType(label);
                 for (JCCaseLabel testCaseLabel : caseLabels) {

@@ -223,10 +223,10 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
     @DefinedBy(Api.COMPILER_TREE)
     public JCTree visitEnhancedForLoop(EnhancedForLoopTree node, P p) {
         JCEnhancedForLoop t = (JCEnhancedForLoop) node;
-        JCVariableDecl var = copy(t.var, p);
+        JCTree varOrRecordPattern = copy(t.varOrRecordPattern, p);
         JCExpression expr = copy(t.expr, p);
         JCStatement body = copy(t.body, p);
-        return M.at(t.pos).ForeachLoop(var, expr, body);
+        return M.at(t.pos).ForeachLoop(varOrRecordPattern, expr, body);
     }
 
     @DefinedBy(Api.COMPILER_TREE)
@@ -293,7 +293,7 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         List<JCExpression> thrown = copy(t.thrown, p);
         JCBlock body = copy(t.body, p);
         JCExpression defaultValue = copy(t.defaultValue, p);
-        return M.at(t.pos).MethodDef(mods, t.name, restype, typarams, recvparam, params, thrown, body, defaultValue);
+        return M.at(t.pos).MethodDef(mods, t.name, restype, typarams, t.tyLtPos, t.tyGtPos, recvparam, params, thrown, body, defaultValue);
     }
 
     @DefinedBy(Api.COMPILER_TREE)
@@ -436,7 +436,7 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         JCTypeApply t = (JCTypeApply) node;
         JCExpression clazz = copy(t.clazz, p);
         List<JCExpression> arguments = copy(t.arguments, p);
-        return M.at(t.pos).TypeApply(clazz, arguments);
+        return M.at(t.pos).TypeApply(clazz, arguments, t.tyLtPos, t.tyGtPos);
     }
 
     @DefinedBy(Api.COMPILER_TREE)
@@ -530,8 +530,7 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         JCRecordPattern t = (JCRecordPattern) node;
         JCExpression deconstructor = copy(t.deconstructor, p);
         List<JCPattern> nested = copy(t.nested, p);
-        JCVariableDecl var = copy(t.var, p);
-        return M.at(t.pos).RecordPattern(deconstructor, nested, var);
+        return M.at(t.pos).RecordPattern(deconstructor, nested);
     }
 
     @DefinedBy(Api.COMPILER_TREE)

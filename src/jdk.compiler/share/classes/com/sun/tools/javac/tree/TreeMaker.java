@@ -188,12 +188,14 @@ public class TreeMaker implements JCTree.Factory {
                                Name name,
                                JCExpression restype,
                                List<JCTypeParameter> typarams,
+                               int tyLtPos,
+                               int tyGtPos,
                                List<JCVariableDecl> params,
                                List<JCExpression> thrown,
                                JCBlock body,
                                JCExpression defaultValue) {
         return MethodDef(
-                mods, name, restype, typarams, null, params,
+                mods, name, restype, typarams, tyLtPos, tyGtPos, null, params,
                 thrown, body, defaultValue);
     }
 
@@ -201,6 +203,8 @@ public class TreeMaker implements JCTree.Factory {
                                Name name,
                                JCExpression restype,
                                List<JCTypeParameter> typarams,
+                               int tyLtPos,
+                               int tyGtPos,
                                JCVariableDecl recvparam,
                                List<JCVariableDecl> params,
                                List<JCExpression> thrown,
@@ -211,6 +215,8 @@ public class TreeMaker implements JCTree.Factory {
                                        name,
                                        restype,
                                        typarams,
+                                       tyLtPos,
+                                       tyGtPos,
                                        recvparam,
                                        params,
                                        thrown,
@@ -273,8 +279,8 @@ public class TreeMaker implements JCTree.Factory {
         return tree;
     }
 
-    public JCEnhancedForLoop ForeachLoop(JCVariableDecl var, JCExpression expr, JCStatement body) {
-        JCEnhancedForLoop tree = new JCEnhancedForLoop(var, expr, body);
+    public JCEnhancedForLoop ForeachLoop(JCTree varOrRecordPattern, JCExpression expr, JCStatement body) {
+        JCEnhancedForLoop tree = new JCEnhancedForLoop(varOrRecordPattern, expr, body);
         tree.pos = pos;
         return tree;
     }
@@ -512,9 +518,8 @@ public class TreeMaker implements JCTree.Factory {
         return tree;
     }
 
-    public JCRecordPattern RecordPattern(JCExpression deconstructor, List<JCPattern> nested,
-                                         JCVariableDecl var) {
-        JCRecordPattern tree = new JCRecordPattern(deconstructor, nested, var);
+    public JCRecordPattern RecordPattern(JCExpression deconstructor, List<JCPattern> nested) {
+        JCRecordPattern tree = new JCRecordPattern(deconstructor, nested);
         tree.pos = pos;
         return tree;
     }
@@ -562,8 +567,8 @@ public class TreeMaker implements JCTree.Factory {
         return tree;
     }
 
-    public JCTypeApply TypeApply(JCExpression clazz, List<JCExpression> arguments) {
-        JCTypeApply tree = new JCTypeApply(clazz, arguments);
+    public JCTypeApply TypeApply(JCExpression clazz, List<JCExpression> arguments, int tyLtPos, int tyGtPos) {
+        JCTypeApply tree = new JCTypeApply(clazz, arguments, tyLtPos, tyGtPos);
         tree.pos = pos;
         return tree;
     }
@@ -858,7 +863,7 @@ public class TreeMaker implements JCTree.Factory {
                         : QualIdent(t.tsym);
                 tp = t.getTypeArguments().isEmpty()
                         ? clazz
-                        : TypeApply(clazz, Types(t.getTypeArguments()));
+                        : TypeApply(clazz, Types(t.getTypeArguments()), Position.NOPOS, Position.NOPOS);
                 break;
             }
             }
@@ -1035,6 +1040,8 @@ public class TreeMaker implements JCTree.Factory {
                 m.name,
                 m.name != names.init ? Type(mtype.getReturnType()) : null,
                 TypeParams(mtype.getTypeArguments()),
+                -1,
+                -1,
                 null, // receiver type
                 Params(mtype.getParameterTypes(), m),
                 Types(mtype.getThrownTypes()),

@@ -32,11 +32,15 @@ import com.sun.tools.javac.code.Source;
 import com.sun.tools.javac.code.Source.Feature;
 import com.sun.tools.javac.file.JavacFileManager;
 import com.sun.tools.javac.parser.Tokens.Comment.CommentStyle;
+import com.sun.tools.javac.resources.CompilerProperties;
 import com.sun.tools.javac.resources.CompilerProperties.Errors;
+import com.sun.tools.javac.resources.CompilerProperties.Helps;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
 import com.sun.tools.javac.util.*;
+import com.sun.tools.javac.util.Help;
 import com.sun.tools.javac.util.JCDiagnostic.*;
-import com.sun.tools.javac.resources.CompilerProperties.Helps;
+import com.sun.tools.javac.util.SuggestedChange;
+import com.sun.tools.javac.util.JCDiagnostic.RangeDiagnosticPosition;
 
 import java.nio.CharBuffer;
 import java.util.Set;
@@ -126,6 +130,11 @@ public class JavaTokenizer extends UnicodeReader {
     protected StringBuilder sb;
 
     /**
+     * Buffer for holding the original source of literals.
+     */
+    protected StringBuilder origSb;
+
+    /**
      * Origin scanner factory.
      */
     protected ScannerFactory fac;
@@ -164,6 +173,7 @@ public class JavaTokenizer extends UnicodeReader {
         this.preview = fac.preview;
         this.lint = fac.lint;
         this.sb = new StringBuilder(256);
+        this.origSb = new StringBuilder(256);
     }
 
     /**
@@ -229,6 +239,25 @@ public class JavaTokenizer extends UnicodeReader {
         if (flags != DiagnosticFlag.SOURCE_LEVEL) {
             tk = TokenKind.ERROR;
         }
+        errPos = pos;
+    }
+
+    protected void lexErrorUnclosedChar(int pos) {
+        log.error(
+                DiagnosticFlag.SYNTAX,
+                pos,
+                Errors.UnclosedCharLit,
+                new Help(
+                        Helps.CloseChar,
+                        List.of(new SuggestedChange(
+                                log.currentSource(),
+                                new RangeDiagnosticPosition(pos, pos),
+                                "'",
+                                Applicability.UNKNOWN
+                        ))
+                )
+        );
+        tk = TokenKind.ERROR;
         errPos = pos;
     }
 
@@ -328,6 +357,15 @@ public class JavaTokenizer extends UnicodeReader {
         return false;
     }
 
+    // Puts a character into the original source buffer
+    protected void putSourceChar() {
+        if (isSurrogate()) {
+            origSb.appendCodePoint(getCodepoint());
+        } else {
+            origSb.append(get());
+        }
+    }
+
     /**
      * Test if the current character is a line terminator.
      *
@@ -355,19 +393,26 @@ public class JavaTokenizer extends UnicodeReader {
      * @param pos position of the first character in literal.
      */
     private void scanLitChar(int pos) {
-        if (acceptThenPut('\\')) {
+        if(is('\\')) {
+            put();
+            putSourceChar();
+            next();
+
             hasEscapeSequences = true;
 
             switch (get()) {
                 case '0': case '1': case '2': case '3':
                 case '4': case '5': case '6': case '7':
                     char leadch = get();
+                    putSourceChar();
                     putThenNext();
 
                     if (inRange('0', '7')) {
+                        putSourceChar();
                         putThenNext();
 
                         if (leadch <= '3' && inRange('0', '7')) {
+                            putSourceChar();
                             putThenNext();
                         }
                     }
@@ -381,11 +426,13 @@ public class JavaTokenizer extends UnicodeReader {
                 case '\'':
                 case '\"':
                 case '\\':
+                    putSourceChar();
                     putThenNext();
                     break;
 
                 case 's':
                     checkSourceLevel(position(), Feature.TEXT_BLOCKS);
+                    putSourceChar();
                     putThenNext();
                     break;
 
@@ -405,6 +452,7 @@ public class JavaTokenizer extends UnicodeReader {
                     break;
             }
         } else {
+            putSourceChar();
             putThenNext();
         }
     }
@@ -505,6 +553,7 @@ public class JavaTokenizer extends UnicodeReader {
         int trailingUnderscorePos;
 
         do {
+            putSourceChar();
             if (!is('_')) {
                 put();
                 trailingUnderscorePos = NOT_FOUND;
@@ -1013,7 +1062,7 @@ public class JavaTokenizer extends UnicodeReader {
                         if (accept('\'')) {
                             tk = TokenKind.CHARLITERAL;
                         } else {
-                            lexError(pos, Errors.UnclosedCharLit);
+                            lexErrorUnclosedChar(position());
                         }
                     }
                     break loop;
@@ -1075,6 +1124,7 @@ public class JavaTokenizer extends UnicodeReader {
             } else {
                 // Get characters from string buffer.
                 String string = sb.toString();
+                final var origString = origSb.toString();
 
                 // If a text block.
                 if (isTextBlock) {
@@ -1110,10 +1160,10 @@ public class JavaTokenizer extends UnicodeReader {
 
                 if (tk.tag == Token.Tag.STRING) {
                     // Build string token.
-                    return new StringToken(tk, pos, endPos, string, comments);
+                    return new StringToken(tk, pos, endPos, string, origString, comments);
                 } else {
                     // Build numeric token.
-                    return new NumericToken(tk, pos, endPos, string, radix, comments);
+                    return new NumericToken(tk, pos, endPos, string, radix, origString, comments);
                 }
             }
         } finally {

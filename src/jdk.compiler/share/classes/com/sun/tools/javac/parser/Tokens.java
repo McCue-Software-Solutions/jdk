@@ -415,10 +415,12 @@ public class Tokens {
     static class StringToken extends Token {
         /** The string value of this token */
         public final String stringVal;
+        public final String sourceString;
 
-        public StringToken(TokenKind kind, int pos, int endPos, String stringVal, List<Comment> comments) {
+        public StringToken(TokenKind kind, int pos, int endPos, String stringVal, String sourceString, List<Comment> comments) {
             super(kind, pos, endPos, comments);
             this.stringVal = stringVal;
+            this.sourceString = sourceString;
         }
 
         protected void checkKind() {
@@ -437,8 +439,8 @@ public class Tokens {
         /** The 'radix' value of this token */
         public final int radix;
 
-        public NumericToken(TokenKind kind, int pos, int endPos, String stringVal, int radix, List<Comment> comments) {
-            super(kind, pos, endPos, stringVal, comments);
+        public NumericToken(TokenKind kind, int pos, int endPos, String stringVal, int radix, String sourceString, List<Comment> comments) {
+            super(kind, pos, endPos, stringVal, sourceString, comments);
             this.radix = radix;
         }
 

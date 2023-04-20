@@ -191,7 +191,8 @@ class ReplParser extends JavacParser {
                     return List.<JCTree>of(classOrRecordOrInterfaceOrEnumDeclaration(mods, dc));
                 } else {
                     int pos = token.pos;
-                    List<JCTypeParameter> typarams = typeParametersOpt();
+                    final var tyParamsData = typeParametersOpt();
+                    List<JCTypeParameter> typarams = tyParamsData.TyParams();
                     // if there are type parameters but no modifiers, save the start
                     // position of the method in the modifiers.
                     if (typarams.nonEmpty() && mods.pos == Position.NOPOS) {
@@ -234,7 +235,7 @@ class ReplParser extends JavacParser {
                         // method declaration
                             //mods.flags |= Flags.STATIC;
                             return List.of(methodDeclaratorRest(
-                                    pos, mods, t, name, typarams,
+                                    pos, mods, t, name, tyParamsData,
                                     false, isVoid, false, dc));
                         } else if (!isVoid && typarams.isEmpty()) {
                         // variable declaration
@@ -249,8 +250,18 @@ class ReplParser extends JavacParser {
                             // malformed declaration, return error
                             pos = token.pos;
                             List<JCTree> err = isVoid
-                                    ? List.of(toP(F.at(pos).MethodDef(mods, name, t, typarams,
-                                                            List.nil(), List.nil(), null, null)))
+                                    ? List.of(toP(F.at(pos).MethodDef(
+                                    mods,
+                                    name,
+                                    t,
+                                    typarams,
+                                    tyParamsData.LtPos(),
+                                    tyParamsData.GtPos(),
+                                    List.nil(),
+                                    List.nil(),
+                                    null,
+                                    null
+                            )))
                                     : null;
                             return List.<JCTree>of(syntaxError(token.pos, err, Errors.Expected(LPAREN)));
                         }
