@@ -527,8 +527,8 @@ public class JavaTokenizer extends UnicodeReader {
         }
 
         int endPos = position();
-        if (sb.charAt(sb.length() - 1) == ';')
-            endPos = - 1;
+        //if (sb.charAt(sb.length() - 1) == ';')
+            //endPos = - 1;
 
         // String ended without close delimiter sequence.
         if (isTextBlock)
