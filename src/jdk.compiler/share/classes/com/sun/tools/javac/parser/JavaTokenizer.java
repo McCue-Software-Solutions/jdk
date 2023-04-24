@@ -207,6 +207,26 @@ public class JavaTokenizer extends UnicodeReader {
         errPos = pos;
     }
 
+    protected void lexErrorUnclosedString(int pos) {
+
+
+        log.error(
+                DiagnosticFlag.SYNTAX,
+                pos,
+                Errors.UnclosedStrLit,
+                new Help(
+                        Helps.CloseString,
+                        List.of(new SuggestedChange(
+                                log.currentSource(),
+                                new RangeDiagnosticPosition(pos, pos),
+                                "\"",
+                                Applicability.UNKNOWN
+                        ))
+                ));
+        tk = TokenKind.ERROR;
+        errPos = pos;
+    }
+
     /**
      * Report an error at the given position using the provided arguments.
      *
@@ -506,8 +526,15 @@ public class JavaTokenizer extends UnicodeReader {
             }
         }
 
+        int endPos = position();
+        //if (sb.charAt(sb.length() - 1) == ';')
+            //endPos = - 1;
+
         // String ended without close delimiter sequence.
-        lexError(pos, isTextBlock ? Errors.UnclosedTextBlock : Errors.UnclosedStrLit);
+        if (isTextBlock)
+            lexError(pos, Errors.UnclosedTextBlock);
+        else
+            lexErrorUnclosedString(endPos);
 
         if (firstEOLN  != NOT_FOUND) {
             // Reset recovery position to point after text block open delimiter sequence.

@@ -49,6 +49,7 @@ import com.sun.tools.javac.util.JCDiagnostic.DiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.Error;
 import com.sun.tools.javac.util.JCDiagnostic.RangeDiagnosticPosition;
 import com.sun.tools.javac.util.JCDiagnostic.Warning;
+import com.sun.tools.javac.util.JCDiagnostic.SimpleDiagnosticPosition;
 
 import com.sun.tools.javac.code.Symbol.*;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -2075,14 +2076,46 @@ public class Flow {
                                       Errors.FinalParameterMayNotBeAssigned(sym));
                         }
                     } else if (!uninits.isMember(sym.adr)) {
-                        log.error(pos, diags.errorKey(flowKind.errKey, sym));
+                        if(flowKind.errKey == "var.might.already.be.assigned"){
+                            log.error(
+                                    pos,
+                                    diags.errorKey(flowKind.errKey, sym),
+                                    new Info(
+                                            Infos.VarMightAlreadyBeAssigned(sym),
+                                            List.of(new InfoPosition(
+                                                    log.currentSource(),
+                                                    new SimpleDiagnosticPosition(sym.pos))
+                                            ))
+                                    );
+                        } else {
+                            log.error(
+                                    pos,
+                                    diags.errorKey(flowKind.errKey, sym),
+                                    new Info(
+                                            Infos.VarMightBeAssignedInLoop(sym),
+                                            List.of(new InfoPosition(
+                                                    log.currentSource(),
+                                                    new SimpleDiagnosticPosition(sym.pos))
+                                            ))
+
+                                    );
+                        }
                     } else {
                         uninit(sym);
                     }
                 }
                 inits.incl(sym.adr);
             } else if ((sym.flags() & FINAL) != 0) {
-                log.error(pos, Errors.VarMightAlreadyBeAssigned(sym));
+                log.error(
+                        pos,
+                        Errors.VarMightAlreadyBeAssigned(sym),
+                        new Info(
+                                Infos.VarMightAlreadyBeAssigned(sym),
+                                List.of(new InfoPosition(
+                                        log.currentSource(),
+                                        new SimpleDiagnosticPosition(sym.pos))
+                                ))
+                        );
             }
         }
         //where
