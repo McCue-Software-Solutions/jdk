@@ -444,7 +444,24 @@ public class JavacParser implements Parser {
         int pos = diagPos.getPreferredPosition();
         if (pos > S.errPos() || pos == Position.NOPOS) {
             if (token.kind == EOF) {
-                log.error(DiagnosticFlag.SYNTAX, diagPos, Errors.PrematureEof);
+                final var sb = new StringBuilder();
+                for (final var kind : scopeStack) {
+                    switch (kind) {
+                        case LBRACE:
+                            sb.append("}");
+                            break;
+                        default:
+                            System.err.println("Unexpected token kind " + kind + " in scope stack");
+                            break;
+                    }
+                }
+                final var help = new Help(Helps.CloseBraces, List.of(new SuggestedChange(
+                        log.currentSource(),
+                        new RangeDiagnosticPosition(diagPos.getPreferredPosition(), diagPos.getPreferredPosition()),
+                        sb.toString(),
+                        Applicability.MACHINE_APPLICABLE
+                )));
+                log.error(DiagnosticFlag.SYNTAX, diagPos, Errors.PrematureEof, help);
             } else {
                 log.error(DiagnosticFlag.SYNTAX, diagPos, errorKey);
             }
@@ -569,6 +586,8 @@ public class JavacParser implements Parser {
 
 
 /* ---------- parsing -------------- */
+
+    Stack<TokenKind> scopeStack = new Stack<>();
 
     /**
      * Ident = IDENTIFIER
@@ -1544,6 +1563,7 @@ public class JavacParser implements Parser {
             nextToken();
             JCExpression selector = parExpression();
             accept(LBRACE);
+            scopeStack.push(LBRACE);
             ListBuffer<JCCase> cases = new ListBuffer<>();
             while (true) {
                 pos = token.pos;
@@ -1557,6 +1577,7 @@ public class JavacParser implements Parser {
                                                                                cases.toList()));
                     e.endpos = token.pos;
                     accept(RBRACE);
+                    scopeStack.pop();
                     return e;
                 default:
                     nextToken(); // to ensure progress
@@ -2579,6 +2600,7 @@ public class JavacParser implements Parser {
 
     List<JCExpression> arrayInitializerElements(int newpos, JCExpression t) {
         accept(LBRACE);
+        scopeStack.push(LBRACE);
         ListBuffer<JCExpression> elems = new ListBuffer<>();
         if (token.kind == COMMA) {
             nextToken();
@@ -2591,6 +2613,7 @@ public class JavacParser implements Parser {
             }
         }
         accept(RBRACE);
+        scopeStack.pop();
         return elems.toList();
     }
 
@@ -2614,6 +2637,7 @@ public class JavacParser implements Parser {
      */
     JCBlock block(int pos, long flags) {
         accept(LBRACE);
+        scopeStack.push(LBRACE);
         List<JCStatement> stats = blockStatements();
         JCBlock t = F.at(pos).Block(flags, stats);
         while (token.kind == CASE || token.kind == DEFAULT) {
@@ -2624,6 +2648,7 @@ public class JavacParser implements Parser {
         // usually but not necessarily the last char of the last token.
         t.endpos = token.pos;
         accept(RBRACE);
+        scopeStack.pop();
         return toP(t);
     }
 
@@ -2957,10 +2982,12 @@ public class JavacParser implements Parser {
             nextToken();
             JCExpression selector = parExpression();
             accept(LBRACE);
+            scopeStack.push(LBRACE);
             List<JCCase> cases = switchBlockStatementGroups();
             JCSwitch t = to(F.at(pos).Switch(selector, cases));
             t.endpos = token.endPos;
             accept(RBRACE);
+            scopeStack.pop();
             return t;
         }
         case SYNCHRONIZED: {
@@ -3580,6 +3607,7 @@ public class JavacParser implements Parser {
         case LBRACE:
             pos = token.pos;
             accept(LBRACE);
+            scopeStack.push(LBRACE);
             ListBuffer<JCExpression> buf = new ListBuffer<>();
             if (token.kind == COMMA) {
                 nextToken();
@@ -3592,6 +3620,7 @@ public class JavacParser implements Parser {
                 }
             }
             accept(RBRACE, tk -> Errors.AnnotationMissingElementValue);
+            scopeStack.pop();
             return toP(F.at(pos).NewArray(null, List.nil(), buf.toList()));
         default:
             selectExprMode();
@@ -3940,8 +3969,10 @@ public class JavacParser implements Parser {
         List<JCDirective> directives = null;
 
         accept(LBRACE);
+        scopeStack.push(LBRACE);
         directives = moduleDirectiveList();
         accept(RBRACE);
+        scopeStack.pop();
         accept(EOF);
 
         JCModuleDecl result = toP(F.at(pos).ModuleDef(mods, kind, name, directives));
@@ -4268,6 +4299,7 @@ public class JavacParser implements Parser {
      */
     List<JCTree> enumBody(Name enumName) {
         accept(LBRACE);
+        scopeStack.push(LBRACE);
         ListBuffer<JCTree> defs = new ListBuffer<>();
         boolean wasSemi = false;
         boolean hasStructuralErrors = false;
@@ -4331,6 +4363,7 @@ public class JavacParser implements Parser {
             }
         }
         accept(RBRACE);
+        scopeStack.pop();
         return defs.toList();
     }
 
@@ -4416,6 +4449,7 @@ public class JavacParser implements Parser {
      */
     List<JCTree> classInterfaceOrRecordBody(Name className, boolean isInterface, boolean isRecord) {
         accept(LBRACE);
+        scopeStack.push(LBRACE);
         if (token.pos <= endPosTable.errorEndPos) {
             // error recovery
             skip(false, true, false, false);
@@ -4433,6 +4467,7 @@ public class JavacParser implements Parser {
            }
         }
         accept(RBRACE);
+        scopeStack.pop();
         return defs.toList();
     }
 
