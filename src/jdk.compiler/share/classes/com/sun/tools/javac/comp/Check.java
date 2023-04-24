@@ -48,6 +48,7 @@ import com.sun.tools.javac.resources.CompilerProperties.Errors;
 import com.sun.tools.javac.resources.CompilerProperties.Fragments;
 import com.sun.tools.javac.resources.CompilerProperties.Infos;
 import com.sun.tools.javac.resources.CompilerProperties.Warnings;
+import com.sun.tools.javac.tree.TreeInfo;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.JCDiagnostic.DiagnosticFlag;
@@ -355,12 +356,21 @@ public class Check {
             Symbol location = sym.location();
             if (location.kind == MTH &&
                     ((MethodSymbol)location).isStaticOrInstanceInit()) {
+                var env = enter.getEnv(location.enclClass());
+                var symTree = TreeInfo.declarationFor(sym, env.tree);
                 log.error(pos,
                           Errors.AlreadyDefinedInClinit(kindName(sym),
                                                         sym,
                                                         kindName(sym.location()),
                                                         kindName(sym.location().enclClass()),
-                                                        sym.location().enclClass()));
+                                                        sym.location().enclClass()),
+                          new Info(
+                                Infos.AlreadyDefined,
+                                List.of(new InfoPosition(
+                                        log.currentSource(),
+                                        symTree))
+                          )
+                );
             } else {
                 /* dont error if this is a duplicated parameter of a generated canonical constructor
                  * as we should have issued an error for the duplicated fields
@@ -368,11 +378,19 @@ public class Check {
                 if (location.kind != MTH ||
                         ((sym.owner.flags_field & GENERATEDCONSTR) == 0) ||
                         ((sym.owner.flags_field & RECORD) == 0)) {
+                    var env = enter.getEnv(location.enclClass());
+                    var symTree = TreeInfo.declarationFor(sym, env.tree);
                     log.error(pos,
                             Errors.AlreadyDefined(kindName(sym),
                                     sym,
                                     kindName(sym.location()),
-                                    sym.location()));
+                                    sym.location()),
+                            new Info(Infos.AlreadyDefined,
+                                    List.of(new InfoPosition(
+                                            log.currentSource(),
+                                            symTree))
+                                    )
+                    );
                 }
             }
         }
@@ -382,7 +400,19 @@ public class Check {
      */
     void varargsDuplicateError(DiagnosticPosition pos, Symbol sym1, Symbol sym2) {
         if (!sym1.type.isErroneous() && !sym2.type.isErroneous()) {
-            log.error(pos, Errors.ArrayAndVarargs(sym1, sym2, sym2.location()));
+            var env = enter.getEnv(sym2.location().enclClass());
+            var symTree = TreeInfo.declarationFor(sym2, env.tree);
+            log.error(
+                    pos,
+                    Errors.ArrayAndVarargs(sym1, sym2, sym2.location()),
+                    new Info(
+                            Infos.ArrayAndVarargs,
+                            List.of(new InfoPosition(
+                                        log.currentSource(),
+                                        symTree))
+                                    )
+
+                     );
         }
     }
 

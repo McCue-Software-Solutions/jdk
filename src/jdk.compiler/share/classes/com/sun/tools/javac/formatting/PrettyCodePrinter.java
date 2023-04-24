@@ -58,7 +58,8 @@ public class PrettyCodePrinter {
 
                 // the offsets into the replacement string to use
                 final var replacementOffsetStart = lineReplaceStart - replacementStartPos;
-                final var replacementOffsetEnd = Math.min(lineReplaceEnd - replacementStartPos, replacement.length() - 1);
+                final var replacementNextLineIdx = replacement.indexOf('\n', replacementOffsetStart);
+                final var replacementOffsetEnd = replacementNextLineIdx == -1 ? replacement.length() - 1 : replacementNextLineIdx;
 
                 // offsets into the line that will be replaced
                 final var lineOffsetStart = lineReplaceStart - sourceLine.startPos();

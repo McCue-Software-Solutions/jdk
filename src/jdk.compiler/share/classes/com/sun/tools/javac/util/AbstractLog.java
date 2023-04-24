@@ -126,6 +126,18 @@ public abstract class AbstractLog {
         report(diags.error(flag, source, pos, errorKey));
     }
 
+    public void error(DiagnosticFlag flag, DiagnosticPosition pos, Error errorKey, Help help) {
+        report(diags.error(flag, source, pos, errorKey, help));
+    }
+
+    public void error(DiagnosticFlag flag, DiagnosticPosition pos, Error errorKey, Info info) {
+        report(diags.error(flag, source, pos, errorKey, info));
+    }
+
+    public void error(DiagnosticFlag flag, DiagnosticPosition pos, Error errorKey, Info info, Help help) {
+        report(diags.error(flag, source, pos, errorKey, info, help));
+    }
+
     // TODO(pretty-diags): docs
     // same as above but with Info
     public void error(DiagnosticPosition pos, Error errorKey, Info info) {
