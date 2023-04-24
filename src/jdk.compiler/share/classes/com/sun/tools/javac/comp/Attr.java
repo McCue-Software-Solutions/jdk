@@ -5131,7 +5131,13 @@ public class Attr extends JCTree.Visitor {
                     log.error(tree.pos(),
                               Errors.WrongNumberTypeArgs(Integer.toString(formals.length())));
                 } else {
-                    log.error(tree.pos(), Errors.TypeDoesntTakeParams(clazztype.tsym));
+                    final var help = new Help(Helps.RemoveTyparams, List.of(new SuggestedChange(
+                            log.currentSource(),
+                            new RangeDiagnosticPosition(tree.tyLtPos, tree.tyGtPos),
+                            "",
+                            Applicability.MACHINE_APPLICABLE
+                    )));
+                    log.error(tree.pos(), Errors.TypeDoesntTakeParams(clazztype.tsym), help);
                 }
                 owntype = types.createErrorType(tree.type);
             }
