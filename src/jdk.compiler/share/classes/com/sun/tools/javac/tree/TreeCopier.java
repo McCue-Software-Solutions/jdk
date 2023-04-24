@@ -293,7 +293,7 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         List<JCExpression> thrown = copy(t.thrown, p);
         JCBlock body = copy(t.body, p);
         JCExpression defaultValue = copy(t.defaultValue, p);
-        return M.at(t.pos).MethodDef(mods, t.name, restype, typarams, t.tyLtPos, t.tyGtPos, recvparam, params, thrown, body, defaultValue);
+        return M.at(t.pos).MethodDef(mods, t.name, restype, typarams, t.tyLtPos, t.tyGtPos, recvparam, params, thrown, t.declaratorEndPos, body, defaultValue);
     }
 
     @DefinedBy(Api.COMPILER_TREE)

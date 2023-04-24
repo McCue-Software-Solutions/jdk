@@ -4575,6 +4575,7 @@ public class JavacParser implements Parser {
                                             tyParamsData.GtPos(),
                                             List.nil(),
                                             List.nil(),
+                                            Position.NOPOS,
                                             null,
                                             null
                                     ));
@@ -4687,9 +4688,12 @@ public class JavacParser implements Parser {
                     thrown = qualidentList(true);
                 }
             }
+
+            int declEnd = Position.NOPOS;
             JCBlock body = null;
             JCExpression defaultValue;
             if (token.kind == LBRACE) {
+                declEnd = S.prevToken().endPos;
                 body = block();
                 defaultValue = null;
             } else {
@@ -4704,6 +4708,7 @@ public class JavacParser implements Parser {
                     // error recovery
                     skip(false, true, false, false);
                     if (token.kind == LBRACE) {
+                        declEnd = S.prevToken().endPos;
                         body = block();
                     }
                 }
@@ -4720,6 +4725,7 @@ public class JavacParser implements Parser {
                             receiverParam,
                             params,
                             thrown,
+                            declEnd,
                             body,
                             defaultValue
                     ));

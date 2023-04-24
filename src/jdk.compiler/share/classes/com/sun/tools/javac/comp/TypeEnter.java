@@ -1143,6 +1143,7 @@ public class TypeEnter implements Completer {
                           Position.NOPOS,
                           List.nil(),
                           List.nil(), // thrown
+                          Position.NOPOS,
                           null,
                           null);
                 memberEnter.memberEnter(getter, env);
@@ -1168,6 +1169,7 @@ public class TypeEnter implements Completer {
                           Position.NOPOS,
                           List.nil(),
                           List.nil(),
+                          Position.NOPOS,
                           null,
                           null);
             memberEnter.memberEnter(values, env);
@@ -1184,6 +1186,7 @@ public class TypeEnter implements Completer {
                                                 names.fromString("name"),
                                                 make.Type(syms.stringType), null)),
                           List.nil(),
+                          Position.NOPOS,
                           null,
                           null);
             memberEnter.memberEnter(valueOf, env);
@@ -1219,6 +1222,7 @@ public class TypeEnter implements Completer {
                               Position.NOPOS,
                               List.nil(),
                               List.nil(),
+                              Position.NOPOS,
                               null,
                               null);
                 memberEnter.memberEnter(toString, env);
@@ -1234,6 +1238,7 @@ public class TypeEnter implements Completer {
                               Position.NOPOS,
                               List.nil(),
                               List.nil(),
+                              Position.NOPOS,
                               null,
                               null);
                 memberEnter.memberEnter(hashCode, env);
@@ -1251,6 +1256,7 @@ public class TypeEnter implements Completer {
                                                 names.fromString("o"),
                                                 make.Type(syms.objectType), null)),
                               List.nil(),
+                              Position.NOPOS,
                               null,
                               null);
                 memberEnter.memberEnter(equals, env);
